@@ -1,0 +1,744 @@
+/* =========================================
+   1. THEME-VARIABLEN
+   ========================================= */
+
+/* Dark Mode (Standard) */
+:root {
+    --bg-main: #1a1d20;
+    --text-main: #f8f9fa;
+    --text-secondary: #adb5bd;
+
+    --link-color: #4dabf7;
+    --link-hover: #fff;
+
+    --nav-link-color: #4dabf7;
+    --nav-link-hover: #fff;
+
+    --border-color: #495057;
+    --footer-bg: #1a1d20;
+    --footer-text: #adb5bd;
+
+    /* Gelb für den Dark-Mode Button */
+    --toggle-color: #ffc107;
+    --toggle-hover-bg: #ffc107;
+    --toggle-icon-hover: #495057;
+
+    /* Karten & Container */
+    --card-bg: #212529;
+
+    /* Gelber Button (CTA) */
+    --btn-cta-bg: #ffc107;
+    --btn-cta-text: #212529;
+    --btn-cta-hover-bg: #e0a800;
+    --btn-cta-hover-text: #212529;
+    --btn-cta-inverse-border: #ffc107;
+    --btn-cta-inverse-text: #ffc107;
+    --btn-cta-inverse-hover-bg: #ffc107;
+    --btn-cta-inverse-hover-text: #212529;
+
+    /* Violetter Button (Akzent) */
+    --btn-custom-bg: #ae3ec9;
+    --btn-custom-text: #ffffff;
+    --btn-custom-hover-bg: #9c36b5;
+    --btn-custom-hover-text: #ffffff;
+    --btn-custom-inverse-border: #ae3ec9;
+    --btn-custom-inverse-text: #ae3ec9;
+    --btn-custom-inverse-hover-bg: #ae3ec9;
+    --btn-custom-inverse-hover-text: #ffffff;
+
+    /* Blauer Button (Primary) */
+    --btn-primary-bg: #4dabf7;
+    --btn-primary-text: #1a1d20;
+    --btn-primary-hover-bg: #339af0;
+    --btn-primary-hover-text: #ffffff;
+    --btn-primary-inverse-border: #4dabf7;
+    --btn-primary-inverse-text: #4dabf7;
+    --btn-primary-inverse-hover-bg: #4dabf7;
+    --btn-primary-inverse-hover-text: #1a1d20;
+
+    /* Grauer Button (Secondary) */
+    --btn-secondary-bg: #495057;
+    --btn-secondary-text: #ffffff;
+    --btn-secondary-hover-bg: #343a40;
+    --btn-secondary-hover-text: #ffffff;
+    --btn-secondary-inverse-border: #495057;
+    --btn-secondary-inverse-text: #adb5bd;
+    --btn-secondary-inverse-hover-bg: #495057;
+    --btn-secondary-inverse-hover-text: #ffffff;
+
+    /* Input-Spezifisch */
+    --input-bg: #212529;
+    --input-text: #ffffff;
+
+    /* Status */
+    --status-success-bg: #0a2519;
+    --status-success-border: #198754;
+    --status-success-text: #75b798;
+
+    --status-error-bg: #2d0b0f;
+    --status-error-border: #dc3545;
+    --status-error-text: #ea868f;
+}
+
+
+/* Light Mode */
+[data-bs-theme="light"] {
+    --bg-main: #ffffff;
+    --text-main: #212529;
+    --text-secondary: #495057;
+
+    --link-color: #1864ab;
+    --link-hover: #000000;
+
+    --nav-link-color: #1864ab;
+    --nav-link-hover: #000000;
+
+    --border-color: #ced4da;
+    --footer-bg: #f8f9fa;
+    --footer-text: #343a40;
+
+    /* Theme-Toggle im Light Mode */
+    --toggle-color: #6c757d;
+    --toggle-hover-bg: #6c757d;
+    --toggle-icon-hover: #ffffff;
+
+    /* Karten im Light Mode */
+    --card-bg: #f8f9fa;
+
+    /* Gelber Button (CTA) */
+    --btn-cta-bg: #ffc107;
+    --btn-cta-text: #212529;
+    --btn-cta-hover-bg: #e0a800;
+    --btn-cta-hover-text: #212529;
+    --btn-cta-inverse-border: #e0a800;
+    --btn-cta-inverse-text: #d39e00;
+    --btn-cta-inverse-hover-bg: #ffc107;
+    --btn-cta-inverse-hover-text: #212529;
+
+    /* Violetter Button (Akzent) */
+    --btn-custom-bg: #9c36b5;
+    --btn-custom-text: #ffffff;
+    --btn-custom-hover-bg: #862e9c;
+    --btn-custom-hover-text: #ffffff;
+    --btn-custom-inverse-border: #9c36b5;
+    --btn-custom-inverse-text: #9c36b5;
+    --btn-custom-inverse-hover-bg: #9c36b5;
+    --btn-custom-inverse-hover-text: #ffffff;
+
+    /* Blauer Button (Primary) */
+    --btn-primary-bg: #1864ab;
+    --btn-primary-text: #ffffff;
+    --btn-primary-hover-bg: #14528c;
+    --btn-primary-hover-text: #ffffff;
+    --btn-primary-inverse-border: #1864ab;
+    --btn-primary-inverse-text: #1864ab;
+    --btn-primary-inverse-hover-bg: #1864ab;
+    --btn-primary-inverse-hover-text: #ffffff;
+
+    /* Grauer Button (Secondary) */
+    --btn-secondary-bg: #ced4da;
+    --btn-secondary-text: #212529;
+    --btn-secondary-hover-bg: #adb5bd;
+    --btn-secondary-hover-text: #212529;
+    --btn-secondary-inverse-border: #868e96;
+    --btn-secondary-inverse-text: #495057;
+    --btn-secondary-inverse-hover-bg: #868e96;
+    --btn-secondary-inverse-hover-text: #ffffff;
+
+    /* Input-Spezifisch */
+    --input-bg: #ffffff;
+    --input-text: #212529;
+
+    /* Status */
+    --status-success-bg: #d1e7dd;
+    --status-success-border: #0f5132;
+    --status-success-text: #0f5132;
+
+    --status-error-bg: #f8d7da;
+    --status-error-border: #842029;
+    --status-error-text: #842029;
+}
+
+/* =========================================
+   2. BASIS-STYLES & TYPOGRAFIE
+   ========================================= */
+
+html {
+    scroll-behavior: smooth;
+}
+
+/* Schriftart lokal eingebunden */
+/* Regular */
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/Inter_18pt-Regular.ttf') format('truetype');
+}
+
+/* Italic */
+@font-face {
+    font-family: 'Inter';
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/Inter_18pt-Italic.ttf') format('truetype');
+}
+
+/* Bold */
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('/fonts/Inter_24pt-Bold.ttf') format('truetype');
+}
+
+body {
+    /* Hintergrund & Farben */
+    background-color: var(--bg-main);
+    color: var(--text-main);
+
+    /* Schriftart */
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-weight: 400; /* Standardmäßig Regular (18pt) */
+
+    /* Rendering-Optimierung (macht die Schrift sauberer) */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+
+    /* Layout-Resets */
+    margin: 0;
+    padding: 0;
+
+    /* Sanfter Theme-Wechsel */
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+h1, h2, h3, .fw-bold {
+    font-weight: 700; /* Greift automatisch auf die 24pt-Bold Datei zu */
+}
+
+[data-bs-theme="light"] .text-light,
+[data-bs-theme="light"] h1,
+[data-bs-theme="light"] h2 {
+    color: var(--text-main) !important;
+}
+
+.text-secondary {
+    color: var(--text-secondary) !important;
+}
+
+.border-secondary {
+    border-color: var(--border-color) !important;
+}
+
+footer {
+    background-color: var(--footer-bg);
+    color: var(--footer-text) !important;
+}
+
+/* =========================================
+   3. NAVIGATION & NAVBAR
+   ========================================= */
+
+.navbar-brand,
+.navbar-dark .navbar-nav .nav-link {
+    color: var(--nav-link-color) !important;
+    transition: all 0.2s ease;
+}
+
+.navbar-nav .nav-link:hover,
+.navbar-nav .nav-link.active {
+    color: var(--nav-link-hover) !important;
+    font-weight: 700 !important;
+}
+
+/* Verhindert, dass der Toggler im aktiven Zustand einen Rahmen bekommt */
+.navbar-toggler:focus {
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.navbar .d-flex {
+    gap: 5px;
+}
+
+/* Verbessert den Abstand im mobilen Menü */
+@media (max-width: 991.98px) {
+    .navbar-collapse {
+        margin-top: 10px;
+        border-top: 1px solid var(--bs-border-color-translucent);
+    }
+
+    .navbar-nav .nav-link {
+        padding: 12px 0;
+    }
+}
+
+/* =========================================
+   4. LINKS & BUTTONS
+   ========================================= */
+
+.hover-link {
+    color: var(--link-color) !important;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.hover-link:hover {
+    color: var(--link-hover) !important;
+    text-decoration: underline !important;
+    transform: translateX(5px);
+}
+
+a {
+    color: var(--link-color);
+
+    transition: color 0.2s ease;
+    text-decoration: underline;
+}
+
+a:hover {
+    color: var(--link-hover);
+    text-decoration: none;
+}
+
+.back-to-top {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 50px;
+    height: 50px;
+    background-color: var(--link-color);
+    color: white !important;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    z-index: 1050;
+    transition: all 0.3s ease;
+}
+
+.back-to-top:hover {
+    background-color: var(--link-hover);
+    color: var(--bg-main) !important;
+    transform: translateY(-5px);
+}
+
+/* Button, der sich dem Theme anpasst */
+.btn-theme-ai {
+    border: 2px solid var(--link-color) !important;
+    color: var(--link-color) !important;
+    background-color: transparent;
+    font-weight: 600;
+    transition: all 0.2s ease-in-out;
+}
+
+/* Hover & Aktiv-Zustand: Invertiert die Farben */
+.btn-theme-ai:hover,
+.btn-theme-ai.active {
+    background-color: var(--link-color) !important;
+    color: #ffffff !important;
+}
+
+[data-bs-theme="light"] .btn-theme-ai:hover,
+[data-bs-theme="light"] .btn-theme-ai.active {
+    color: #ffffff !important;
+}
+
+.btn-outline-secondary.rounded-pill {
+    border: none !important;
+    background: transparent !important;
+    color: var(--text-secondary) !important;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.btn-outline-secondary.rounded-pill:hover {
+    color: var(--link-color) !important;
+    text-decoration: underline;
+}
+
+/* Theme-Toggle Logik */
+#theme-toggle {
+    transition: all 0.3s ease;
+    background-color: transparent !important;
+}
+
+#theme-toggle svg {
+    transition: fill 0.3s ease;
+}
+
+#theme-toggle.is-sun,
+#theme-toggle.is-moon {
+    color: var(--toggle-color) !important;
+    border-color: var(--toggle-color) !important;
+}
+
+#theme-toggle.is-sun svg,
+#theme-toggle.is-moon svg {
+    fill: var(--toggle-color) !important;
+}
+
+#theme-toggle:hover {
+    background-color: var(--toggle-hover-bg) !important;
+}
+
+#theme-toggle:hover svg {
+    fill: var(--toggle-icon-hover) !important;
+}
+
+.btn-clear-results {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 0.25rem 0.75rem;
+    transition: color 0.2s ease;
+    cursor: pointer;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+}
+
+.btn-clear-results:hover {
+    color: var(--link-color);
+    text-decoration: none;
+}
+
+.btn-clear-results span {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+/* =========================================
+   5. CARDS
+   ========================================= */
+
+.bg-dark {
+    background-color: var(--card-bg) !important;
+}
+
+[data-bs-theme="light"] .btn-close {
+    filter: invert(0) grayscale(100%) brightness(0);
+    opacity: 0.7;
+}
+
+[data-bs-theme="light"] .btn-outline-light {
+    color: var(--text-main) !important;
+    border-color: var(--text-main) !important;
+}
+
+[data-bs-theme="light"] .btn-outline-light:hover {
+    color: #ffffff !important;
+    background-color: var(--text-main) !important;
+}
+
+/* =========================================
+   6. REGRESSION DASHBOARD
+   ========================================= */
+
+/* Basis-Styles für alle modularen Dashboard-Buttons */
+.btn-cta, .btn-cta-inverse,
+.btn-custom, .btn-custom-inverse,
+.btn-primary, .btn-primary-inverse,
+.btn-secondary, .btn-secondary-inverse {
+    font-weight: 700;
+    transition: all 0.2s ease-in-out;
+}
+
+/* GELBER BUTTONS (CTA) */
+.btn-cta {
+    background-color: var(--btn-cta-bg) !important;
+    border: 2px solid var(--btn-cta-bg) !important;
+    color: var(--btn-cta-text) !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+}
+
+.btn-cta:hover:not(:disabled) {
+    background-color: var(--btn-cta-hover-bg) !important;
+    border-color: var(--btn-cta-hover-bg) !important;
+    color: var(--btn-cta-hover-text) !important;
+    transform: scale(1.02);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25);
+}
+
+.btn-cta:disabled.training-active {
+    background-color: transparent !important;
+    border: 2px dashed var(--border-color) !important;
+    color: var(--text-secondary) !important;
+    opacity: 1;
+    transform: none;
+    box-shadow: none;
+    cursor: wait;
+}
+
+.btn-cta-inverse {
+    background-color: transparent !important;
+    border: 2px solid var(--btn-cta-inverse-border) !important;
+    color: var(--btn-cta-inverse-text) !important;
+}
+
+.btn-cta-inverse:hover:not(:disabled):not(.disabled) {
+    background-color: var(--btn-cta-inverse-hover-bg) !important;
+    color: var(--btn-cta-inverse-hover-text) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* VIOLETTer BUTTON (CUSTOM) --- */
+.btn-custom {
+    background-color: var(--btn-custom-bg) !important;
+    border: 2px solid var(--btn-custom-bg) !important;
+    color: var(--btn-custom-text) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.btn-custom:hover:not(:disabled) {
+    background-color: var(--btn-custom-hover-bg) !important;
+    border-color: var(--btn-custom-hover-bg) !important;
+    color: var(--btn-custom-hover-text) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-custom-inverse {
+    background-color: transparent !important;
+    border: 2px solid var(--btn-custom-inverse-border) !important;
+    color: var(--btn-custom-inverse-text) !important;
+}
+
+.btn-custom-inverse:hover:not(:disabled):not(.disabled) {
+    background-color: var(--btn-custom-inverse-hover-bg) !important;
+    color: var(--btn-custom-inverse-hover-text) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* BLAUER BUTTONS (PRIMARY) --- */
+.btn-primary {
+    background-color: var(--btn-primary-bg) !important;
+    border: 2px solid var(--btn-primary-bg) !important;
+    color: var(--btn-primary-text) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-color: var(--btn-primary-hover-bg) !important;
+    border-color: var(--btn-primary-hover-bg) !important;
+    color: var(--btn-primary-hover-text) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+}
+
+.btn-primary-inverse {
+    background-color: transparent !important;
+    border: 2px solid var(--btn-primary-inverse-border) !important;
+    color: var(--btn-primary-inverse-text) !important;
+}
+
+.btn-primary-inverse:hover:not(:disabled):not(.disabled) {
+    background-color: var(--btn-primary-inverse-hover-bg) !important;
+    color: var(--btn-primary-inverse-hover-text) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* GRAUER BUTTONS (SECONDARY) --- */
+.btn-secondary {
+    background-color: var(--btn-secondary-bg) !important;
+    border: 2px solid var(--btn-secondary-bg) !important;
+    color: var(--btn-secondary-text) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background-color: var(--btn-secondary-hover-bg) !important;
+    border-color: var(--btn-secondary-hover-bg) !important;
+    color: var(--btn-secondary-hover-text) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.btn-secondary-inverse {
+    background-color: transparent !important;
+    border: 2px solid var(--btn-secondary-inverse-border) !important;
+    color: var(--btn-secondary-inverse-text) !important;
+}
+
+.btn-secondary-inverse:hover:not(:disabled):not(.disabled) {
+    background-color: var(--btn-secondary-inverse-hover-bg) !important;
+    color: var(--btn-secondary-inverse-hover-text) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-icon {
+    display: inline-block;
+    margin-right: 6px;
+    font-weight: bold;
+    transition: transform 0.2s ease;
+}
+
+.btn-primary:hover .btn-icon,
+.btn-secondary:hover .btn-icon {
+    transform: translateY(-2px);
+}
+
+.btn-primary-inverse:hover .btn-icon,
+.btn-secondary-inverse:hover .btn-icon {
+    transform: translateY(2px);
+}
+
+.dashboard-title {
+    color: var(--text-main) !important;
+}
+
+.dashboard-subtitle {
+    color: var(--text-secondary) !important;
+}
+
+.dashboard-chart-card {
+    background-color: color-mix(in srgb, var(--text-secondary), transparent 94%);
+    border-color: var(--border-color) !important
+}
+
+.chart-card-title {
+    color: var(--text-main) !important;
+    border-color: var(--border-color) !important;
+}
+
+.chart-axis-title {
+    color: var(--text-secondary) !important;
+}
+
+.placeholder-text {
+    color: var(--text-secondary) !important;
+}
+
+.start-action-area {
+    min-height: 48px;
+}
+
+/* Button: Start */
+.btn-start-training {
+    background-color: #ffc107 !important;
+    border: 2px solid #ffc107 !important;
+    color: #212529 !important;
+    font-size: 1rem;
+    font-weight: 700;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+}
+
+.btn-start-training:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--toggle-color), #000000 25%);
+    border-color: color-mix(in srgb, var(--toggle-color), #000000 25%);
+    transform: scale(1.02);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.35);
+}
+
+.btn-start-training:disabled.training-active {
+    background-color: transparent !important;
+    border: 2px dashed var(--border-color) !important;
+    color: var(--text-secondary) !important;
+    opacity: 1;
+    cursor: wait;
+}
+
+/* --- Cards --- */
+
+.epoch-card {
+    background-color: color-mix(in srgb, var(--text-secondary), transparent 92%);
+    border: 1px solid var(--border-color);
+}
+
+.epoch-card .epoch-card-label.h5 {
+    color: var(--text-main) !important;
+}
+
+.epoch-input {
+    background-color: var(--input-bg) !important;
+    color: var(--input-text) !important;
+    border: 1px solid var(--border-color) !important;
+    transition: all 0.2s ease;
+}
+
+.epoch-input.is-invalid {
+    border: 2px solid #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.epoch-input:focus {
+    border-color: var(--link-color) !important;
+    box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--link-color), transparent 75%) !important;
+}
+
+.file-input-hidden {
+    display: none;
+}
+
+.text-epoch-highlight {
+    color: var(--link-color);
+}
+
+label.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+label.btn.disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+.status-box {
+    padding: 1rem;
+    margin-top: 1rem;
+    border-radius: 0.375rem;
+    border: 2px solid;
+    width: 100%;
+    font-weight: 600;
+}
+
+.status-success {
+    background-color: var(--status-success-bg);
+    border-color: var(--status-success-border);
+    color: var(--status-success-text);
+}
+
+.status-error {
+    background-color: var(--status-error-bg);
+    border-color: var(--status-error-border);
+    color: var(--status-error-text);
+}
+
+/* =========================================
+   7. UTILITIES
+   ========================================= */
+
+.container {
+    max-width: 1100px;
+}
+
+.rounded-4 {
+    border-radius: 1rem !important;
+}
+
+.shadow-lg {
+    box-shadow: 0 1rem 3rem rgba(0, 0, 0, .175) !important;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-main);
+}
+
+::-webkit-scrollbar-thumb {
+    background: #343a40;
+    border-radius: 10px;
+}

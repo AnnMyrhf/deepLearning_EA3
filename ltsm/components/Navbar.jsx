@@ -18,7 +18,7 @@
                 <nav className="navbar navbar-expand-lg border-bottom border-secondary shadow-sm">
                     <div className="container-fluid px-4">
                         <NavLink className="navbar-brand fw-bold" to="/" onClick={handleNavLinkClick}>
-                            EA1 – Bilderkennung mit ml5
+                            EA3 – Language Model mit LSTM
                         </NavLink>
 
                         {/* Wrapper für die Buttons rechts auf Mobilgeräten */}
@@ -61,7 +61,7 @@
                         <div className={`collapse navbar-collapse ${isMenuOpen ? 'show' : ''}`} id="navbarNav">
                             <ul className="navbar-nav ms-auto pt-3 pt-lg-0">
                                 <li className="nav-item">
-                                    <NavLink className="nav-link" to="/" onClick={handleNavLinkClick}>Bilderkennung</NavLink>
+                                    <NavLink className="nav-link" to="/" onClick={handleNavLinkClick}>Wortvorhersage</NavLink>
                                 </li>
                                 <li className="nav-item">
                                     <NavLink className="nav-link" to="/diskussion" onClick={handleNavLinkClick}>Diskussion</NavLink>
