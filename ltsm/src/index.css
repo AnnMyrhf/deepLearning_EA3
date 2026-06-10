@@ -612,16 +612,10 @@ a:hover {
     border-color: var(--border-color) !important;
 }
 
-.chart-axis-title {
-    color: var(--text-secondary) !important;
-}
-
 .placeholder-text {
     color: var(--text-secondary) !important;
 }
 
-
-/* --- Cards --- */
 
 .card {
     background-color: color-mix(in srgb, var(--text-secondary), transparent 92%);
@@ -630,6 +624,38 @@ a:hover {
 
 .card .epoch-card-label.h5 {
     color: var(--text-main) !important;
+}
+
+.wortvorhersage-page {
+    width: 100%;
+}
+
+.wortvorhersage-card {
+    overflow: hidden;
+}
+
+.wortvorhersage-controls {
+    display: flex;
+    flex-direction: column;
+}
+
+.wortvorhersage-status {
+    min-height: 1.5rem;
+}
+
+.wortvorhersage-results {
+    transition: border-color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.wortvorhersage-results .rounded-pill {
+    transition: transform 0.2s ease,
+    color 0.2s ease;
+}
+
+.wortvorhersage-results .rounded-pill:hover {
+    transform: translateY(-2px);
 }
 
 .text-input {
@@ -649,21 +675,6 @@ a:hover {
     box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--link-color), transparent 75%) !important;
 }
 
-.file-input-hidden {
-    display: none;
-}
-
-label.btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-}
-
-label.btn.disabled {
-    cursor: not-allowed;
-    opacity: 0.4;
-}
 
 .status-box {
     padding: 1rem;
