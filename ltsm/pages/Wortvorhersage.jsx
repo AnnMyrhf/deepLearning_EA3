@@ -46,14 +46,14 @@ export default function Wortvorhersage() {
                     {/* Statische Buttons */}
                     <button
                         type="button"
-                        className="btn btn-cta fw-bold"
+                        className="btn btn-cta fw-bold btn-fixed-width"
                     >
                         Vorhersage
                     </button>
 
                     <button
                         type="button"
-                        className="btn btn-primary-inverse fw-bold"
+                        className="btn btn-primary-inverse fw-bold btn-fixed-width"
                     >
                         Weiter
                     </button>
@@ -62,7 +62,7 @@ export default function Wortvorhersage() {
                     {!isAutoRunning ? (
                         <button
                             type="button"
-                            className="btn btn-secondary-inverse fw-bold"
+                            className="btn btn-secondary fw-bold btn-fixed-width"
                             onClick={() => setIsAutoRunning(true)}
                         >
                             Auto
@@ -70,8 +70,7 @@ export default function Wortvorhersage() {
                     ) : (
                         <button
                             type="button"
-                            // Verwendet die ausgefüllte Klasse, um den aktiven Zustand zu verdeutlichen
-                            className="btn btn-secondary fw-bold"
+                            className="btn btn-outline-danger fw-bold btn-fixed-width"
                             onClick={() => setIsAutoRunning(false)}
                         >
                             Stopp
@@ -81,7 +80,7 @@ export default function Wortvorhersage() {
 
                 {/* Test-Feedback, um den State visuell zu überprüfen */}
                 <div className="text-center mt-4 text-secondary small fw-bold">
-                    Status: {isAutoRunning ? 'Automatik läuft' : 'Wartet auf Eingabe'}
+                    {isAutoRunning ? 'Automatik läuft...' : 'Warten auf Eingabe'}
                 </div>
             </div>
             {/*<div className="d-flex flex-wrap gap-3 mb-4 mt-4 align-items-center justify-content-center">
