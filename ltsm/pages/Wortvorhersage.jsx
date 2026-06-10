@@ -1,7 +1,18 @@
 import React, { useState } from 'react';
 
 export default function Wortvorhersage() {
+
+    // State Toogle-Button-Logik
     const [isAutoRunning, setIsAutoRunning] = useState(false);
+
+    // Inhalt Textfeld
+    const [promptText, setPromptText] = useState('');
+
+    // Zurücksetzen des Textfelds und Stoppen der Automatik
+    const handleReset = () => {
+        setPromptText('');
+        setIsAutoRunning(false);
+    };
 
     return (<div className="container py-5 mb-5">
         <header className="mb-4">
@@ -23,6 +34,8 @@ export default function Wortvorhersage() {
                     rows="4"
                     placeholder="Gib hier deinen Text aus vollständigen Wörtern ein..."
                     aria-describedby="promptHelp"
+                    value={promptText}
+                    onChange={(e) => setPromptText(e.target.value)}
                 ></textarea>
                 {/* Help-Text und Reset-Button  */}
                 <div className="d-flex justify-content-between align-items-start mt-2">
@@ -33,6 +46,7 @@ export default function Wortvorhersage() {
                         type="button"
                         className="btn btn-clear-results fw-bold p-0 ms-3 mt-1"
                         aria-label="Eingabe und Netzwerk zurücksetzen"
+                        onClick={handleReset}
                     >
                         <span className="btn-icon">↺</span> Zurücksetzen
                     </button>
@@ -70,7 +84,7 @@ export default function Wortvorhersage() {
                     ) : (
                         <button
                             type="button"
-                            className="btn btn-outline-danger fw-bold btn-fixed-width"
+                            className="btn btn-danger fw-bold btn-fixed-width"
                             onClick={() => setIsAutoRunning(false)}
                         >
                             Stopp
@@ -83,37 +97,6 @@ export default function Wortvorhersage() {
                     {isAutoRunning ? 'Automatik läuft...' : 'Warten auf Eingabe'}
                 </div>
             </div>
-            {/*<div className="d-flex flex-wrap gap-3 mb-4 mt-4 align-items-center justify-content-center">
-                <button
-                    type="button"
-                    className="btn btn-cta fw-bold"
-                    aria-label="Wahrscheinlichkeiten für das nächste Wort berechnen"
-                >Vorhersage
-                </button>
-                <button
-                    type="button"
-                    className="btn btn-custom-inverse fw-boldr"
-                    aria-label="Wahrscheinlichstes Wort annehmen und weiter"
-                >
-                    Weiter
-                </button>
-                <div className="btn-group ms-md-5 ms-3" role="group" aria-label="Automatische Vorhersage">
-                    <button
-                        type="button"
-                        className="btn btn-primary-inverse fw-bold"
-                        aria-label="Automatisch 10 Wörter vorhersagen"
-                    >
-                        Auto
-                    </button>
-                    <button
-                        type="button"
-                        className="btn btn-secondary-inverse fw-bold"
-                        aria-label="Automatische Vorhersage anhalten"
-                    >
-                        Stopp
-                    </button>
-                </div>
-            </div>*/}
             {/* Auswahl eines der nächsten Wörter */}
             <div className="p-4 border rounded-4 dashboard-chart-card shadow-sm text-start mt-4" aria-live="polite">
                 <h3 className="h6 fw-bold chart-card-title mb-3">Wahrscheinlichste nächste Wörter</h3>
