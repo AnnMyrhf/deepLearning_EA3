@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export default function Wortvorhersage() {
+    const [isAutoRunning, setIsAutoRunning] = useState(false);
+
     return (<div className="container py-5 mb-5">
         <header className="mb-4">
             <h1 className="display-4 fw-bold dashboard-title mb-3">Wortvorhersage</h1>
@@ -9,15 +11,15 @@ export default function Wortvorhersage() {
             </p>
         </header>
 
-        <div className="card border-0 shadow-sm epoch-card p-4 mb-4">
+        <div className="card border-0 shadow-sm card p-4 mb-4">
             {/* Prompt-Eingabe */}
             <div className="mb-4 text-start">
-                <label htmlFor="promptInput" className="form-label h5 fw-bold epoch-card-label d-block mb-2">
+                <label htmlFor="promptInput" className="form-label h5 fw-bold card-label d-block mb-3">
                     Text-Eingabe (Prompt)
                 </label>
                 <textarea
                     id="promptInput"
-                    className="form-control epoch-input mb-2"
+                    className="form-control text-input mb-2"
                     rows="4"
                     placeholder="Gib hier deinen Text aus vollständigen Wörtern ein..."
                     aria-describedby="promptHelp"
@@ -37,7 +39,52 @@ export default function Wortvorhersage() {
                 </div>
             </div>
             {/* Kontroll-Buttons */}
-            <div className="d-flex flex-wrap gap-3 mb-4 align-items-center">
+            <div className="p-5">
+                {/* Zentrierte Button-Reihe mit gleichmäßigem Abstand (gap-3) */}
+                <div className="d-flex flex-wrap gap-3 align-items-center justify-content-center">
+
+                    {/* Statische Buttons */}
+                    <button
+                        type="button"
+                        className="btn btn-cta fw-bold"
+                    >
+                        Vorhersage
+                    </button>
+
+                    <button
+                        type="button"
+                        className="btn btn-primary-inverse fw-bold"
+                    >
+                        Weiter
+                    </button>
+
+                    {/* Dynamischer Toggle-Button */}
+                    {!isAutoRunning ? (
+                        <button
+                            type="button"
+                            className="btn btn-secondary-inverse fw-bold"
+                            onClick={() => setIsAutoRunning(true)}
+                        >
+                            Auto
+                        </button>
+                    ) : (
+                        <button
+                            type="button"
+                            // Verwendet die ausgefüllte Klasse, um den aktiven Zustand zu verdeutlichen
+                            className="btn btn-secondary fw-bold"
+                            onClick={() => setIsAutoRunning(false)}
+                        >
+                            Stopp
+                        </button>
+                    )}
+                </div>
+
+                {/* Test-Feedback, um den State visuell zu überprüfen */}
+                <div className="text-center mt-4 text-secondary small fw-bold">
+                    Status: {isAutoRunning ? 'Automatik läuft' : 'Wartet auf Eingabe'}
+                </div>
+            </div>
+            {/*<div className="d-flex flex-wrap gap-3 mb-4 mt-4 align-items-center justify-content-center">
                 <button
                     type="button"
                     className="btn btn-cta fw-bold"
@@ -46,15 +93,15 @@ export default function Wortvorhersage() {
                 </button>
                 <button
                     type="button"
-                    className="btn btn-custom-inverse fw-bold"
+                    className="btn btn-custom-inverse fw-boldr"
                     aria-label="Wahrscheinlichstes Wort annehmen und weiter"
                 >
-                    Weiter <span className="btn-icon ms-1"></span>
+                    Weiter
                 </button>
-                <div className="btn-group" role="group" aria-label="Automatische Vorhersage">
+                <div className="btn-group ms-md-5 ms-3" role="group" aria-label="Automatische Vorhersage">
                     <button
                         type="button"
-                        className="btn btn-primary fw-bold"
+                        className="btn btn-primary-inverse fw-bold"
                         aria-label="Automatisch 10 Wörter vorhersagen"
                     >
                         Auto
@@ -67,9 +114,9 @@ export default function Wortvorhersage() {
                         Stopp
                     </button>
                 </div>
-            </div>
+            </div>*/}
             {/* Auswahl eines der nächsten Wörter */}
-            <div className="p-4 border rounded-4 dashboard-chart-card shadow-sm text-start" aria-live="polite">
+            <div className="p-4 border rounded-4 dashboard-chart-card shadow-sm text-start mt-4" aria-live="polite">
                 <h3 className="h6 fw-bold chart-card-title mb-3">Wahrscheinlichste nächste Wörter</h3>
 
                 {/* Beispielhafte Darstellung der generierten Wörter */}
