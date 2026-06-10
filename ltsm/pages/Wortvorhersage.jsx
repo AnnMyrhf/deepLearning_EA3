@@ -30,7 +30,7 @@ export default function Wortvorhersage() {
                 <div className="mb-4 text-start">
                     <label
                         htmlFor="promptInput"
-                        className="form-label h5 fw-bold card-label d-block mb-3"
+                        className="prompt-label"
                     >
                         Text-Eingabe (Prompt)
                     </label>
@@ -55,20 +55,18 @@ export default function Wortvorhersage() {
 
                         <button
                             type="button"
-                            className="btn btn-clear-results fw-bold p-0 ms-3 mt-1"
+                            className="btn btn-clear-results"
                             aria-label="Eingabe und Netzwerk zurücksetzen"
                             onClick={handleReset}
                         >
-                            <span className="btn-icon">↺</span>
-                            Zurücksetzen
+                            <span className="btn-icon">↺</span>Zurücksetzen
                         </button>
                     </div>
                 </div>
 
                 <div className="wortvorhersage-controls p-5">
 
-                    <div className="d-flex flex-wrap gap-3 align-items-center justify-content-center">
-
+                    <div className="prediction-actions">
                         <button
                             type="button"
                             className="btn btn-cta fw-bold btn-fixed-width"
@@ -102,7 +100,7 @@ export default function Wortvorhersage() {
                         )}
                     </div>
 
-                    <div className="wortvorhersage-status text-center mt-4 text-secondary small fw-bold">
+                    <div className="wortvorhersage-status">
                         {isAutoRunning
                             ? 'Automatik läuft...'
                             : 'Warten auf Eingabe'}
@@ -110,17 +108,17 @@ export default function Wortvorhersage() {
                 </div>
 
                 <div
-                    className="p-4 border rounded-4 dashboard-chart-card shadow-sm text-start mt-4 wortvorhersage-results"
+                    className="wortvorhersage-results dashboard-chart-card"
                     aria-live="polite"
                 >
                     <h3 className="h6 fw-bold chart-card-title mb-3">
                         Wahrscheinlichste nächste Wörter
                     </h3>
 
-                    <div className="d-flex flex-wrap gap-2">
+                    <div className="prediction-word-list">
                         <button
                             type="button"
-                            className="btn btn-outline-secondary rounded-pill d-flex align-items-center gap-2"
+                            className="prediction-word-btn"
                         >
                             <span>und</span>
                             <span className="badge bg-secondary rounded-pill">
@@ -130,7 +128,7 @@ export default function Wortvorhersage() {
 
                         <button
                             type="button"
-                            className="btn btn-outline-secondary rounded-pill d-flex align-items-center gap-2"
+                            className="prediction-word-btn"
                         >
                             <span>die</span>
                             <span className="badge bg-secondary rounded-pill">
@@ -140,7 +138,7 @@ export default function Wortvorhersage() {
 
                         <button
                             type="button"
-                            className="btn btn-outline-secondary rounded-pill d-flex align-items-center gap-2"
+                            className="prediction-word-btn"
                         >
                             <span>aber</span>
                             <span className="badge bg-secondary rounded-pill">

@@ -544,17 +544,14 @@ a:hover {
 }
 
 .btn-clear-results {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 1rem;
+    padding: 0;
+    font-weight: 500;
     background: transparent;
     border: none;
     color: var(--text-secondary);
-    font-size: 0.875rem;
-    font-weight: 500;
-    padding: 0.25rem 0.75rem;
-    transition: color 0.2s ease;
-    cursor: pointer;
-    text-decoration: none;
-    display: flex;
-    align-items: center;
 }
 
 .btn-clear-results:hover {
@@ -616,6 +613,29 @@ a:hover {
     color: var(--text-secondary) !important;
 }
 
+.prediction-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+}
+
+.prediction-word-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.prediction-word-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+}
 
 .card {
     background-color: color-mix(in srgb, var(--text-secondary), transparent 92%);
@@ -640,10 +660,19 @@ a:hover {
 }
 
 .wortvorhersage-status {
-    min-height: 1.5rem;
+    margin-top: 1.5rem;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 700;
 }
 
 .wortvorhersage-results {
+    margin-top: 1.5rem;
+    padding: 1.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 1rem;
+    text-align: left;
     transition: border-color 0.2s ease,
     background-color 0.2s ease,
     box-shadow 0.2s ease;
@@ -656,6 +685,13 @@ a:hover {
 
 .wortvorhersage-results .rounded-pill:hover {
     transform: translateY(-2px);
+}
+
+.prompt-label {
+    display: block;
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+    font-weight: 700;
 }
 
 .text-input {
