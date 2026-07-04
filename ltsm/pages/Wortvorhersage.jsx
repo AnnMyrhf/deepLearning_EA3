@@ -1,5 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import * as tf from '@tensorflow/tfjs'
+import * as tfvis from '@tensorflow/tfjs-vis';
 
 export default function Wortvorhersage() {
 
@@ -20,6 +21,9 @@ export default function Wortvorhersage() {
 
     // State für die berechneten Vorhersagen
     const [predictions, setPredictions] = useState([]);
+
+    // State um Training zu tracken
+    const [isTraining, setIsTraining] = useState(false);
 
     // Text beim ersten Rendern der Komponente laden
     useEffect(() => {
@@ -55,18 +59,18 @@ export default function Wortvorhersage() {
                 const xs = tf.tensor2d(sequencesX, [sequencesX.length, SEQUENCE_LENGTH]);
 
                 // ys wird ein 1D-Tensor mit den Ziel-IDs
-                const ys = tf.tensor1d(labelsY, 'int32');
+                const ys = tf.tensor1d(labelsY, 'float32');
 
                 console.log("Tensoren erfolgreich erstellt!");
                 console.log("Shape von X (Eingabe):", xs.shape);
                 console.log("Shape von Y (Label):", ys.shape);
 
-                // Modell aufbauen und trainieren (hier z. B. 5 Epochen zum Testen)
-                const trainedModel = await buildAndTrainModel(xs, ys, vocab.vocabSize);
-
-                // Modell im React-State speichern, damit die Buttons es nutzen können
-                setModel(trainedModel);
-                console.log("Modell ist bereit für Vorhersagen!");
+                // Modell aufbauen und trainieren (Training startet kurz verzögert, damit die UI flüssig bleibt)
+                setTimeout(async () => {
+                    const trainedModel = await buildAndTrainModel(xs, ys, vocab.vocabSize);
+                    setModel(trainedModel);
+                    console.log("Modell ist bereit für Vorhersagen!");
+                }, 500);
 
             } catch (error) {
                 console.error("Fehler beim Laden oder Verarbeiten:", error);
@@ -191,6 +195,35 @@ export default function Wortvorhersage() {
             metrics: ['accuracy']
         });
 
+        // Training starten: Status setzen
+        setIsTraining(true);
+
+        /// Gib dem Browser Zeit für ein Rendering-Update
+        await new Promise(resolve => requestAnimationFrame(resolve));
+
+        // Sidebar für den Visor deaktivieren
+        tfvis.visor().close(); // Schließt die Sidebar, falls sie offen ist
+
+        // Surface im Container erstellen
+        const surface = tfvis.visor().surface({
+            name: 'Trainingsverlauf',
+            styles: { height: 200 }
+        });
+
+        // Training starten
+        await model.fit(xs, ys, {
+            epochs: 10,
+            batchSize: 32,
+            callbacks: tfvis.show.fitCallbacks(
+                surface,
+                ['loss', 'acc'],
+            )
+        });
+
+        // Training fertig: Status zurücksetzen und Container wieder verstecken)
+        setIsTraining(false);
+
+        // Zusammenfassung Architektur zur Überprüfung in Konsole ausgeben
         model.summary();
 
         return model;
@@ -402,6 +435,13 @@ export default function Wortvorhersage() {
                             <p className="text-muted">Noch keine Vorhersage vorhanden.</p>
                         )}
                     </div>
+                    {/* Diagramm für Loss & Accurency */}
+                    {isTraining && (
+                        <div className="chart-container-wrapper">
+                            <h5>Trainingsverlauf</h5>
+                            <div id="training-chart-container"></div>
+                        </div>
+                    )}
                 </div>
 
             </div>
