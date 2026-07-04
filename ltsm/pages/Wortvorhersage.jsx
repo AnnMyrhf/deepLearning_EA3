@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 
 export default function Wortvorhersage() {
 
@@ -8,10 +8,88 @@ export default function Wortvorhersage() {
     // Inhalt Textfeld
     const [promptText, setPromptText] = useState('');
 
+    // State für den geladenen Text (Rohdaten)
+    const [rawText, setRawText] = useState('');
+
+    // State für Vokabular und Mappings
+    const [vocabData, setVocabData] = useState(null);
+
+    // Text beim ersten Rendern der Komponente laden
+    useEffect(() => {
+        const fetchDataset = async () => {
+            try {
+                const response = await fetch('/data/trainingsdata_Sandwich_Inseln.txt');
+                const rawText = await response.text();
+
+                console.log("Datensatz erfolgreich geladen. Zeichenanzahl:", rawText.length);
+
+                // 1. Bereinigen
+                const cleanedText = cleanText(rawText);
+
+                // 2. Vokabular aufbauen
+                const vocab = buildVocabulary(cleanedText);
+
+                // 3. Im State speichern
+                setVocabData(vocab);
+
+                console.log("Vokabular erfolgreich erstellt!");
+                console.log("Größe des Vokabulars:", vocab.vocabSize);
+
+            } catch (error) {
+                console.error("Fehler beim Laden oder Verarbeiten:", error);
+            }
+        };
+
+        fetchDataset();
+    }, []); // Das leere Array sorgt dafür, dass dies nur einmal beim Mounten passiert
+
     // Zurücksetzen des Textfelds und Stoppen der Automatik
     const handleReset = () => {
         setPromptText('');
         setIsAutoRunning(false);
+    };
+
+    // Text bereinigen und normieren
+    const cleanText = (text) => {
+        // Alles in Kleinbuchstaben umwandeln
+        let cleaned = text.toLowerCase();
+
+        // Sonderzeichen und Zahlen entfernen, aber deutsche Umlaute behalten
+        cleaned = cleaned.replace(/[^a-zäöüß\s]/g, ' ');
+
+        // Mehrfache Leerzeichen und Zeilenumbrüche durch ein einziges Leerzeichen ersetzen
+        cleaned = cleaned.replace(/\s+/g, ' ').trim();
+
+        return cleaned;
+    };
+
+    // Hilfsfunktion, um Vokabular und Mappings erstellen
+    const buildVocabulary = (text) => {
+        // Text an den Leerzeichen in ein Array aus Wörtern aufteilen
+        const words = text.split(' ');
+
+        // Ein Set filtert automatisch alle Duplikate heraus
+        const uniqueWords = [...new Set(words)];
+
+        // WICHTIG: Das geforderte OOV-Token (Out of Vocabulary) für unbekannte Wörter hinzufügen
+        // Wir setzen es ganz an den Anfang (Index 0)
+        uniqueWords.unshift('<OOV>');
+
+        const word2idx = {};
+        const idx2word = {};
+
+        // Mappings befüllen
+        uniqueWords.forEach((word, index) => {
+            word2idx[word] = index;
+            idx2word[index] = word;
+        });
+
+        return {
+            word2idx,
+            idx2word,
+            vocabSize: uniqueWords.length,
+            tokens: words // Die bereinigte, chronologische Liste aller Wörter des Textes
+        };
     };
 
     return (<div className="container py-5 mb-5 wortvorhersage-page">
