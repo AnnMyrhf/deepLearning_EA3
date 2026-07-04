@@ -1,4 +1,5 @@
 import React, {useState, useEffect} from 'react';
+import * as tf from '@tensorflow/tfjs'
 
 export default function Wortvorhersage() {
 
@@ -13,6 +14,12 @@ export default function Wortvorhersage() {
 
     // State für Vokabular und Mappings
     const [vocabData, setVocabData] = useState(null);
+
+    // State, um das TensorFlow-Modell später zu speichern
+    const [model, setModel] = useState(null);
+
+    // State für die berechneten Vorhersagen
+    const [predictions, setPredictions] = useState([]);
 
     // Text beim ersten Rendern der Komponente laden
     useEffect(() => {
@@ -34,6 +41,32 @@ export default function Wortvorhersage() {
 
                 console.log("Vokabular erfolgreich erstellt!");
                 console.log("Größe des Vokabulars:", vocab.vocabSize);
+
+                // 4. Sequenzen erstellen (laut Aufgabe mit Längen wie 5, 10, 15 experimentieren)
+                const SEQUENCE_LENGTH = 5;
+                const { sequencesX, labelsY } = createSequences(
+                    vocab.tokens,
+                    vocab.word2idx,
+                    SEQUENCE_LENGTH
+                );
+
+                // 3. In TensorFlow Tensoren umwandeln
+                // xs wird ein 2D-Tensor: [Anzahl_Sequenzen, Sequenzlänge]
+                const xs = tf.tensor2d(sequencesX, [sequencesX.length, SEQUENCE_LENGTH]);
+
+                // ys wird ein 1D-Tensor mit den Ziel-IDs
+                const ys = tf.tensor1d(labelsY, 'int32');
+
+                console.log("Tensoren erfolgreich erstellt!");
+                console.log("Shape von X (Eingabe):", xs.shape);
+                console.log("Shape von Y (Label):", ys.shape);
+
+                // Modell aufbauen und trainieren (hier z. B. 5 Epochen zum Testen)
+                const trainedModel = await buildAndTrainModel(xs, ys, vocab.vocabSize);
+
+                // Modell im React-State speichern, damit die Buttons es nutzen können
+                setModel(trainedModel);
+                console.log("Modell ist bereit für Vorhersagen!");
 
             } catch (error) {
                 console.error("Fehler beim Laden oder Verarbeiten:", error);
@@ -92,6 +125,130 @@ export default function Wortvorhersage() {
         };
     };
 
+    // Trainingssequenzen erstellen
+    const createSequences = (tokens, word2idx, sequenceLength = 5) => {
+        const sequencesX = [];
+        const labelsY = [];
+
+        // Wir iterieren durch das Array, stoppen aber früh genug,
+        // damit wir am Ende nicht über das Array hinausschießen
+        for (let i = 0; i < tokens.length - sequenceLength; i++) {
+
+            // Schneide ein Fenster der Länge sequenceLength aus
+            const sequenceTokens = tokens.slice(i, i + sequenceLength);
+
+            // Das Wort direkt nach dem Fenster ist unser Ziel
+            const targetToken = tokens[i + sequenceLength];
+
+            // Wandle die Wörter in ihre entsprechenden IDs (Zahlen) um
+            const sequenceIds = sequenceTokens.map(word => word2idx[word]);
+            const targetId = word2idx[targetToken];
+
+            // Füge sie unseren finalen Arrays hinzu
+            sequencesX.push(sequenceIds);
+            labelsY.push(targetId);
+        }
+
+        return {
+            sequencesX,
+            labelsY
+        };
+    };
+
+    // Model trainieren
+    const buildAndTrainModel = async (xs, ys, vocabSize) => {
+        const model = tf.sequential();
+
+        // 1. Embedding Layer
+        // Wandelt die Wort-IDs in dichte Vektoren um
+        model.add(tf.layers.embedding({
+            inputDim: vocabSize,
+            outputDim: 50, // Dimensionalität der Einbettung
+            inputLength: 5 // Muss der SEQUENCE_LENGTH entsprechen
+        }));
+
+        // 2. Hidden Layer: LSTM (Mindestens 100 Units laut Aufgabe)
+        model.add(tf.layers.lstm({
+            units: 100,
+            returnSequences: false
+        }));
+
+        // 3. Output Layer: Dense Layer mit Softmax
+        // Gibt Wahrscheinlichkeiten für jedes mögliche Wort im Vokabular aus
+        model.add(tf.layers.dense({
+            units: vocabSize,
+            activation: 'softmax'
+        }));
+
+        // 4. Kompilieren
+        // Wir nutzen 'sparseCategoricalCrossentropy', da unsere Labels (Y) einfache IDs und keine One-Hot-Vektoren sind
+        model.compile({
+            optimizer: tf.train.adam(0.01), // Learning Rate von 0.01 laut Aufgabe
+            loss: 'sparseCategoricalCrossentropy',
+            metrics: ['accuracy']
+        });
+
+        model.summary();
+
+        return model;
+    };
+
+    const handlePredict = async () => {
+        // Prüfen, ob Modell und Vokabular schon geladen sind
+        if (!model || !vocabData || !promptText) return;
+
+        const { word2idx, idx2word } = vocabData;
+        const SEQUENCE_LENGTH = 5; // Muss der Länge aus dem Training entsprechen
+
+        // 1. Eingabe bereinigen und in Array aufteilen
+        const cleanedText = cleanText(promptText);
+        let inputTokens = cleanedText.split(' ').filter(word => word.length > 0);
+
+        // 2. Sequenzlänge anpassen (wir brauchen exakt SEQUENCE_LENGTH Wörter)
+        if (inputTokens.length > SEQUENCE_LENGTH) {
+            // Wenn zu lang: Nimm nur die letzten N Wörter
+            inputTokens = inputTokens.slice(-SEQUENCE_LENGTH);
+        } else if (inputTokens.length < SEQUENCE_LENGTH) {
+            // Wenn zu kurz: Fülle vorne mit dem OOV-Token auf
+            const padding = Array(SEQUENCE_LENGTH - inputTokens.length).fill('<OOV>');
+            inputTokens = [...padding, ...inputTokens];
+        }
+
+        // 3. Wörter in IDs umwandeln
+        const inputIds = inputTokens.map(word => word2idx[word] || 0);
+
+        // 4. In Tensor umwandeln (Shape: [1, SEQUENCE_LENGTH])
+        const inputTensor = tf.tensor2d([inputIds], [1, SEQUENCE_LENGTH]);
+
+        // 5. Vorhersage machen
+        const predictionTensor = model.predict(inputTensor);
+
+        // Die Wahrscheinlichkeiten als normales JavaScript-Array auslesen
+        const probabilities = await predictionTensor.data();
+
+        // 6. Die Top 3 Wahrscheinlichkeiten und ihre Indizes finden
+        // Wir erstellen ein Array aus Objekten mit Index und Wahrscheinlichkeit
+        const probsArray = Array.from(probabilities).map((prob, index) => ({
+            prob: prob,
+            index: index
+        }));
+
+        // Absteigend nach Wahrscheinlichkeit sortieren
+        probsArray.sort((a, b) => b.prob - a.prob);
+
+        // Die besten 3 nehmen und in Text umwandeln
+        const top3 = probsArray.slice(0, 3).map(item => ({
+            word: idx2word[item.index],
+            probability: Math.round(item.prob * 100) // In Prozent umrechnen
+        }));
+
+        setPredictions(top3);
+
+        // Speicher freigeben (wichtig bei TensorFlow.js!)
+        inputTensor.dispose();
+        predictionTensor.dispose();
+    };
+
     return (<div className="container py-5 mb-5 wortvorhersage-page">
             <header className="mb-4">
                 <h1 className="display-4 fw-bold dashboard-title mb-3">
@@ -148,6 +305,8 @@ export default function Wortvorhersage() {
                         <button
                             type="button"
                             className="btn btn-cta fw-bold btn-fixed-width"
+                            onClick={handlePredict}
+                            disabled={!model} // Button deaktivieren, solange das Modell lädt/trainiert
                         >
                             Vorhersage
                         </button>
@@ -194,35 +353,24 @@ export default function Wortvorhersage() {
                     </h3>
 
                     <div className="prediction-word-list">
-                        <button
-                            type="button"
-                            className="prediction-word-btn"
-                        >
-                            <span>und</span>
-                            <span className="badge bg-secondary rounded-pill">
-                            45%
-                        </span>
-                        </button>
-
-                        <button
-                            type="button"
-                            className="prediction-word-btn"
-                        >
-                            <span>die</span>
-                            <span className="badge bg-secondary rounded-pill">
-                            30%
-                        </span>
-                        </button>
-
-                        <button
-                            type="button"
-                            className="prediction-word-btn"
-                        >
-                            <span>aber</span>
-                            <span className="badge bg-secondary rounded-pill">
-                            15%
-                        </span>
-                        </button>
+                        {predictions.length > 0 ? (
+                            predictions.map((pred, idx) => (
+                                <button
+                                    key={idx}
+                                    type="button"
+                                    className="prediction-word-btn"
+                                    // Optional: Bei Klick das Wort zum promptText hinzufügen
+                                    onClick={() => setPromptText(promptText + ' ' + pred.word)}
+                                >
+                                    <span>{pred.word}</span>
+                                    <span className="badge bg-secondary rounded-pill">
+                    {pred.probability}%
+                </span>
+                                </button>
+                            ))
+                        ) : (
+                            <p className="text-muted">Noch keine Vorhersage vorhanden.</p>
+                        )}
                     </div>
                 </div>
 
