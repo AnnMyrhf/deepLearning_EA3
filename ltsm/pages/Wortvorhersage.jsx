@@ -65,7 +65,7 @@ export default function Wortvorhersage() {
 
         const inputTensor = tf.tensor2d(
             [inputIds],
-            [1, 5],
+            [1, SEQUENCE_LENGTH],
             "float32"
         );
 
