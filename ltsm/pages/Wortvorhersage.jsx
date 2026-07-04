@@ -1,274 +1,90 @@
 import React, {useState, useEffect} from 'react';
 import * as tf from '@tensorflow/tfjs'
-import * as tfvis from '@tensorflow/tfjs-vis';
+
+const SEQUENCE_LENGTH = 5;
 
 export default function Wortvorhersage() {
-
-    // State Toogle-Button-Logik
+    const [model, setModel] = useState(null);
+    const [wordIndex, setWordIndex] = useState(null);
+    const [idxToWord, setIdxToWord] = useState(null);
+    const [promptText, setPromptText] = useState('');
+    const [predictions, setPredictions] = useState([]);
     const [isAutoRunning, setIsAutoRunning] = useState(false);
 
-    // Inhalt Textfeld
-    const [promptText, setPromptText] = useState('');
-
-    // State für den geladenen Text (Rohdaten)
-    const [rawText, setRawText] = useState('');
-
-    // State für Vokabular und Mappings
-    const [vocabData, setVocabData] = useState(null);
-
-    // State, um das TensorFlow-Modell später zu speichern
-    const [model, setModel] = useState(null);
-
-    // State für die berechneten Vorhersagen
-    const [predictions, setPredictions] = useState([]);
-
-    // State um Training zu tracken
-    const [isTraining, setIsTraining] = useState(false);
-
-    // Text beim ersten Rendern der Komponente laden
+// 1. Modell und Mappings beim Start laden
     useEffect(() => {
-        const fetchDataset = async () => {
+        const loadResources = async () => {
             try {
-                const response = await fetch('/data/trainingsdata_Sandwich_Inseln.txt');
-                const rawText = await response.text();
+                await tf.setBackend('webgl');
+                await tf.ready();
+                console.log("Lade Modell...");
+                const model = await tf.loadGraphModel('/model/model.json')
+                setModel(model);
 
-                console.log("Datensatz erfolgreich geladen. Zeichenanzahl:", rawText.length);
+                const response = await fetch('/model/word_index.json');
+                const word2idx = await response.json();
+                setWordIndex(word2idx);
 
-                // 1. Bereinigen
-                const cleanedText = cleanText(rawText);
+                const idx2word = Object.fromEntries(Object.entries(word2idx).map(([k, v]) => [v, k]));
+                setIdxToWord(idx2word);
 
-                // 2. Vokabular aufbauen
-                const vocab = buildVocabulary(cleanedText);
-
-                // 3. Im State speichern
-                setVocabData(vocab);
-
-                console.log("Vokabular erfolgreich erstellt!");
-                console.log("Größe des Vokabulars:", vocab.vocabSize);
-
-                // 4. Sequenzen erstellen (laut Aufgabe mit Längen wie 5, 10, 15 experimentieren)
-                const SEQUENCE_LENGTH = 5;
-                const { sequencesX, labelsY } = createSequences(
-                    vocab.tokens,
-                    vocab.word2idx,
-                    SEQUENCE_LENGTH
-                );
-
-                // 3. In TensorFlow Tensoren umwandeln
-                // xs wird ein 2D-Tensor: [Anzahl_Sequenzen, Sequenzlänge]
-                const xs = tf.tensor2d(sequencesX, [sequencesX.length, SEQUENCE_LENGTH]);
-
-                // ys wird ein 1D-Tensor mit den Ziel-IDs
-                const ys = tf.tensor1d(labelsY, 'float32');
-
-                console.log("Tensoren erfolgreich erstellt!");
-                console.log("Shape von X (Eingabe):", xs.shape);
-                console.log("Shape von Y (Label):", ys.shape);
-
-                // Modell aufbauen und trainieren (Training startet kurz verzögert, damit die UI flüssig bleibt)
-                setTimeout(async () => {
-                    const trainedModel = await buildAndTrainModel(xs, ys, vocab.vocabSize);
-                    setModel(trainedModel);
-                    console.log("Modell ist bereit für Vorhersagen!");
-                }, 500);
-
+                console.log("Modell und Vokabular erfolgreich geladen!");
+                console.log("MODEL:", model);
+                console.log("EXECUTOR:", model.executor);
+                console.log("INPUTS:", model.inputs);
             } catch (error) {
-                console.error("Fehler beim Laden oder Verarbeiten:", error);
+                console.error("Fehler beim Laden:", error);
             }
         };
 
-        fetchDataset();
-    }, []); // Das leere Array sorgt dafür, dass dies nur einmal beim Mounten passiert
+        // Hier wird die Funktion aufgerufen:
+        loadResources();
+    }, []); // Hier endet das Array der Abhängigkeiten
 
-    // Zurücksetzen des Textfelds und Stoppen der Automatik
     const handleReset = () => {
         setPromptText('');
+        setPredictions([]);
         setIsAutoRunning(false);
     };
 
-    // Text bereinigen und normieren
-    const cleanText = (text) => {
-        // Alles in Kleinbuchstaben umwandeln
-        let cleaned = text.toLowerCase();
-
-        // Sonderzeichen und Zahlen entfernen, aber deutsche Umlaute behalten
-        cleaned = cleaned.replace(/[^a-zäöüß\s]/g, ' ');
-
-        // Mehrfache Leerzeichen und Zeilenumbrüche durch ein einziges Leerzeichen ersetzen
-        cleaned = cleaned.replace(/\s+/g, ' ').trim();
-
-        return cleaned;
-    };
-
-    // Hilfsfunktion, um Vokabular und Mappings erstellen
-    const buildVocabulary = (text) => {
-        // Text an den Leerzeichen in ein Array aus Wörtern aufteilen
-        const words = text.split(' ');
-
-        // Ein Set filtert automatisch alle Duplikate heraus
-        const uniqueWords = [...new Set(words)];
-
-        // WICHTIG: Das geforderte OOV-Token (Out of Vocabulary) für unbekannte Wörter hinzufügen
-        // Wir setzen es ganz an den Anfang (Index 0)
-        uniqueWords.unshift('<OOV>');
-
-        const word2idx = {};
-        const idx2word = {};
-
-        // Mappings befüllen
-        uniqueWords.forEach((word, index) => {
-            word2idx[word] = index;
-            idx2word[index] = word;
-        });
-
-        return {
-            word2idx,
-            idx2word,
-            vocabSize: uniqueWords.length,
-            tokens: words // Die bereinigte, chronologische Liste aller Wörter des Textes
-        };
-    };
-
-    // Trainingssequenzen erstellen
-    const createSequences = (tokens, word2idx, sequenceLength = 5) => {
-        const sequencesX = [];
-        const labelsY = [];
-
-        // Wir iterieren durch das Array, stoppen aber früh genug,
-        // damit wir am Ende nicht über das Array hinausschießen
-        for (let i = 0; i < tokens.length - sequenceLength; i++) {
-
-            // Schneide ein Fenster der Länge sequenceLength aus
-            const sequenceTokens = tokens.slice(i, i + sequenceLength);
-
-            // Das Wort direkt nach dem Fenster ist unser Ziel
-            const targetToken = tokens[i + sequenceLength];
-
-            // Wandle die Wörter in ihre entsprechenden IDs (Zahlen) um
-            const sequenceIds = sequenceTokens.map(word => word2idx[word]);
-            const targetId = word2idx[targetToken];
-
-            // Füge sie unseren finalen Arrays hinzu
-            sequencesX.push(sequenceIds);
-            labelsY.push(targetId);
-        }
-
-        return {
-            sequencesX,
-            labelsY
-        };
-    };
-
-    // Model trainieren
-    const buildAndTrainModel = async (xs, ys, vocabSize) => {
-        const model = tf.sequential();
-
-        // 1. Embedding Layer
-        // Wandelt die Wort-IDs in dichte Vektoren um
-        model.add(tf.layers.embedding({
-            inputDim: vocabSize,
-            outputDim: 50, // Dimensionalität der Einbettung
-            inputLength: 5, // Muss der SEQUENCE_LENGTH entsprechen
-            embeddingsInitializer: 'glorotUniform' // Diese Methode ist schneller und standardmäßig empfohlen
-        }));
-
-        // 2. Hidden Layer: LSTM (Mindestens 100 Units laut Aufgabe)
-        model.add(tf.layers.lstm({
-            units: 100,
-            returnSequences: false,
-            kernelInitializer: 'glorotUniform', // Initialisierer für die Gewichte
-            recurrentInitializer: 'glorotUniform' // Initialisierer für die rekurrenten Gewichte
-        }));
-
-        // 3. Output Layer: Dense Layer mit Softmax
-        // Gibt Wahrscheinlichkeiten für jedes mögliche Wort im Vokabular aus
-        model.add(tf.layers.dense({
-            units: vocabSize,
-            activation: 'softmax'
-        }));
-
-        // 4. Kompilieren
-        // Wir nutzen 'sparseCategoricalCrossentropy', da unsere Labels (Y) einfache IDs und keine One-Hot-Vektoren sind
-        model.compile({
-            optimizer: tf.train.adam(0.01), // Learning Rate von 0.01 laut Aufgabe
-            loss: 'sparseCategoricalCrossentropy',
-            metrics: ['accuracy']
-        });
-
-        // Training starten: Status setzen
-        setIsTraining(true);
-
-        /// Gib dem Browser Zeit für ein Rendering-Update
-        await new Promise(resolve => requestAnimationFrame(resolve));
-
-        // Sidebar für den Visor deaktivieren
-        tfvis.visor().close(); // Schließt die Sidebar, falls sie offen ist
-
-        // Surface im Container erstellen
-        const surface = tfvis.visor().surface({
-            name: 'Trainingsverlauf',
-            styles: { height: 200 }
-        });
-
-        // Training starten
-        await model.fit(xs, ys, {
-            epochs: 10,
-            batchSize: 32,
-            callbacks: tfvis.show.fitCallbacks(
-                surface,
-                ['loss', 'acc'],
-            )
-        });
-
-        // Training fertig: Status zurücksetzen und Container wieder verstecken)
-        setIsTraining(false);
-
-        // Zusammenfassung Architektur zur Überprüfung in Konsole ausgeben
-        model.summary();
-
-        return model;
-    };
-
-    // Reine Berechnungsfunktion, die einen Text als Parameter annimmt
+    // Vorhersage-Logik
     const calculatePrediction = async (currentText) => {
-        if (!model || !vocabData || !currentText) return [];
+        if (!model || !wordIndex || !idxToWord) return [];
 
-        const { word2idx, idx2word } = vocabData;
-        const SEQUENCE_LENGTH = 5;
+        const words = currentText
+            .toLowerCase()
+            .replace(/[^a-zäöüß\s]/g, " ")
+            .split(/\s+/)
+            .filter(Boolean);
 
-        const cleanedText = cleanText(currentText);
-        let inputTokens = cleanedText.split(' ').filter(word => word.length > 0);
+        let inputIds = words.slice(-SEQUENCE_LENGTH).map(w => wordIndex[w] || 0);
 
-        if (inputTokens.length > SEQUENCE_LENGTH) {
-            inputTokens = inputTokens.slice(-SEQUENCE_LENGTH);
-        } else if (inputTokens.length < SEQUENCE_LENGTH) {
-            const padding = Array(SEQUENCE_LENGTH - inputTokens.length).fill('<OOV>');
-            inputTokens = [...padding, ...inputTokens];
+        while (inputIds.length < SEQUENCE_LENGTH) {
+            inputIds.unshift(0);
         }
 
-        const inputIds = inputTokens.map(word => word2idx[word] || 0);
-        const inputTensor = tf.tensor2d([inputIds], [1, SEQUENCE_LENGTH]);
+        const inputTensor = tf.tensor2d(
+            [inputIds],
+            [1, 5],
+            "float32"
+        );
 
-        const predictionTensor = model.predict(inputTensor);
-        const probabilities = await predictionTensor.data();
+        const output = await model.executeAsync(inputTensor);
 
-        const probsArray = Array.from(probabilities).map((prob, index) => ({
-            prob,
-            index
-        }));
-
-        probsArray.sort((a, b) => b.prob - a.prob);
-
-        const top3 = probsArray.slice(0, 3).map(item => ({
-            word: idx2word[item.index],
-            probability: Math.round(item.prob * 100)
-        }));
+        const top3 = Array.from(probs)
+            .map((prob, index) => ({ prob, index }))
+            .sort((a, b) => b.prob - a.prob)
+            .slice(0, 3)
+            .map(item => ({
+                word: idxToWord[item.index] || "<UNK>",
+                probability: Math.round(item.prob * 100)
+            }));
 
         inputTensor.dispose();
-        predictionTensor.dispose();
+        output.dispose();
 
         return top3;
-    };
+       };
 
     // Wird aufgerufen, wenn der Nutzer auf "Vorhersage" klickt
     const handlePredictClick = async () => {
@@ -386,6 +202,7 @@ export default function Wortvorhersage() {
                                 type="button"
                                 className="btn btn-secondary fw-bold btn-fixed-width"
                                 onClick={() => setIsAutoRunning(true)}
+                                disabled={!model} // Button deaktivieren, solange das Modell lädt/trainiert
                             >
                                 Auto
                             </button>
@@ -436,14 +253,7 @@ export default function Wortvorhersage() {
                         )}
                     </div>
                     {/* Diagramm für Loss & Accurency */}
-                    {isTraining && (
-                        <div className="chart-container-wrapper">
-                            <h5>Trainingsverlauf</h5>
-                            <div id="training-chart-container"></div>
-                        </div>
-                    )}
                 </div>
-
             </div>
         </div>
     );
