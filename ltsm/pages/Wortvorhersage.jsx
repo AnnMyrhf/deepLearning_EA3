@@ -164,13 +164,16 @@ export default function Wortvorhersage() {
         model.add(tf.layers.embedding({
             inputDim: vocabSize,
             outputDim: 50, // Dimensionalität der Einbettung
-            inputLength: 5 // Muss der SEQUENCE_LENGTH entsprechen
+            inputLength: 5, // Muss der SEQUENCE_LENGTH entsprechen
+            embeddingsInitializer: 'glorotUniform' // Diese Methode ist schneller und standardmäßig empfohlen
         }));
 
         // 2. Hidden Layer: LSTM (Mindestens 100 Units laut Aufgabe)
         model.add(tf.layers.lstm({
             units: 100,
-            returnSequences: false
+            returnSequences: false,
+            kernelInitializer: 'glorotUniform', // Initialisierer für die Gewichte
+            recurrentInitializer: 'glorotUniform' // Initialisierer für die rekurrenten Gewichte
         }));
 
         // 3. Output Layer: Dense Layer mit Softmax
@@ -193,61 +196,86 @@ export default function Wortvorhersage() {
         return model;
     };
 
-    const handlePredict = async () => {
-        // Prüfen, ob Modell und Vokabular schon geladen sind
-        if (!model || !vocabData || !promptText) return;
+    // Reine Berechnungsfunktion, die einen Text als Parameter annimmt
+    const calculatePrediction = async (currentText) => {
+        if (!model || !vocabData || !currentText) return [];
 
         const { word2idx, idx2word } = vocabData;
-        const SEQUENCE_LENGTH = 5; // Muss der Länge aus dem Training entsprechen
+        const SEQUENCE_LENGTH = 5;
 
-        // 1. Eingabe bereinigen und in Array aufteilen
-        const cleanedText = cleanText(promptText);
+        const cleanedText = cleanText(currentText);
         let inputTokens = cleanedText.split(' ').filter(word => word.length > 0);
 
-        // 2. Sequenzlänge anpassen (wir brauchen exakt SEQUENCE_LENGTH Wörter)
         if (inputTokens.length > SEQUENCE_LENGTH) {
-            // Wenn zu lang: Nimm nur die letzten N Wörter
             inputTokens = inputTokens.slice(-SEQUENCE_LENGTH);
         } else if (inputTokens.length < SEQUENCE_LENGTH) {
-            // Wenn zu kurz: Fülle vorne mit dem OOV-Token auf
             const padding = Array(SEQUENCE_LENGTH - inputTokens.length).fill('<OOV>');
             inputTokens = [...padding, ...inputTokens];
         }
 
-        // 3. Wörter in IDs umwandeln
         const inputIds = inputTokens.map(word => word2idx[word] || 0);
-
-        // 4. In Tensor umwandeln (Shape: [1, SEQUENCE_LENGTH])
         const inputTensor = tf.tensor2d([inputIds], [1, SEQUENCE_LENGTH]);
 
-        // 5. Vorhersage machen
         const predictionTensor = model.predict(inputTensor);
-
-        // Die Wahrscheinlichkeiten als normales JavaScript-Array auslesen
         const probabilities = await predictionTensor.data();
 
-        // 6. Die Top 3 Wahrscheinlichkeiten und ihre Indizes finden
-        // Wir erstellen ein Array aus Objekten mit Index und Wahrscheinlichkeit
         const probsArray = Array.from(probabilities).map((prob, index) => ({
-            prob: prob,
-            index: index
+            prob,
+            index
         }));
 
-        // Absteigend nach Wahrscheinlichkeit sortieren
         probsArray.sort((a, b) => b.prob - a.prob);
 
-        // Die besten 3 nehmen und in Text umwandeln
         const top3 = probsArray.slice(0, 3).map(item => ({
             word: idx2word[item.index],
-            probability: Math.round(item.prob * 100) // In Prozent umrechnen
+            probability: Math.round(item.prob * 100)
         }));
 
-        setPredictions(top3);
-
-        // Speicher freigeben (wichtig bei TensorFlow.js!)
         inputTensor.dispose();
         predictionTensor.dispose();
+
+        return top3;
     };
+
+    // Wird aufgerufen, wenn der Nutzer auf "Vorhersage" klickt
+    const handlePredictClick = async () => {
+        const top3 = await calculatePrediction(promptText);
+        setPredictions(top3);
+    };
+
+    const handleNext = async () => {
+        // Nur ausführen, wenn wir Vorhersagen haben
+        if (predictions.length > 0) {
+            // Das wahrscheinlichste Wort steht an Index 0
+            const bestWord = predictions[0].word;
+
+            // Neuen Text zusammensetzen
+            const newText = (promptText + ' ' + bestWord).trim();
+
+            // Textfeld aktualisieren
+            setPromptText(newText);
+
+            // Direkt die nächste Vorhersage mit dem neuen Text berechnen
+            const nextTop3 = await calculatePrediction(newText);
+            setPredictions(nextTop3);
+        }
+    };
+    // Auto-Funktion (überwacht den Schalter isAutoRunning, wenn er aktiv ist, löst er nach einer bestimmten Zeit (z. B. 1,5 Sekunden) automatisch die handleWeiter-Funktion aus)
+    useEffect(() => {
+        let timer;
+
+        if (isAutoRunning && predictions.length > 0) {
+            // setTimeout anstelle von setInterval ist sicherer,
+            // damit sich Berechnungen nicht überschneiden
+            timer = setTimeout(() => {
+                handleNext();
+            }, 1500); // 1.5 Sekunden Pause zwischen den Wörtern
+        }
+
+        // Timer aufräumen, wenn die Komponente neu rendert oder gestoppt wird
+        return () => clearTimeout(timer);
+    }, [isAutoRunning, promptText, predictions]);
+
 
     return (<div className="container py-5 mb-5 wortvorhersage-page">
             <header className="mb-4">
@@ -305,7 +333,7 @@ export default function Wortvorhersage() {
                         <button
                             type="button"
                             className="btn btn-cta fw-bold btn-fixed-width"
-                            onClick={handlePredict}
+                            onClick={handlePredictClick}
                             disabled={!model} // Button deaktivieren, solange das Modell lädt/trainiert
                         >
                             Vorhersage
@@ -314,6 +342,8 @@ export default function Wortvorhersage() {
                         <button
                             type="button"
                             className="btn btn-primary-inverse fw-bold btn-fixed-width"
+                            onClick={handleNext}
+                            disabled={predictions.length === 0}
                         >
                             Weiter
                         </button>
