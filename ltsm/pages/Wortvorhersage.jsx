@@ -2,7 +2,7 @@ import React, {useState, useEffect} from 'react';
 import * as tf from '@tensorflow/tfjs'
 
 const SEQUENCE_LENGTH = 5;
-const EPOCHS = 1;
+const EPOCHS = 200;
 const BATCHSIZE = 32;
 
 export default function Wortvorhersage() {
@@ -26,6 +26,10 @@ export default function Wortvorhersage() {
     const [isTraining, setIsTraining] = useState(false);
 
     const [isModelReady, setIsModelReady] = useState(false);
+
+    // States fuer den Traningsfortschritt
+    const [currentEpoch, setCurrentEpoch] = useState(0);
+    const [metrics, setMetrics] = useState({loss: '-', acc: '-'});
 
     // Text beim ersten Rendern der Komponente laden
     useEffect(() => {
@@ -57,11 +61,7 @@ export default function Wortvorhersage() {
                 console.log("Größe des Vokabulars:", vocab.vocabSize);
 
                 // 4. Sequenzen erstellen (laut Aufgabe mit Längen wie 5, 10, 15 experimentieren)
-                const {sequencesX, labelsY} = createSequences(
-                    vocab.tokens,
-                    vocab.word2idx,
-                    SEQUENCE_LENGTH
-                );
+                const {sequencesX, labelsY} = createSequences(vocab.tokens, vocab.word2idx, SEQUENCE_LENGTH);
 
                 // 3. In TensorFlow Tensoren umwandeln
                 // xs wird ein 2D-Tensor: [Anzahl_Sequenzen, Sequenzlänge]
@@ -110,11 +110,7 @@ export default function Wortvorhersage() {
         // 3. Netzwerk im Ausgangszustand neu erstellen und trainieren
         if (vocabData) {
             try {
-                const { sequencesX, labelsY } = createSequences(
-                    vocabData.tokens,
-                    vocabData.word2idx,
-                    SEQUENCE_LENGTH
-                );
+                const {sequencesX, labelsY} = createSequences(vocabData.tokens, vocabData.word2idx, SEQUENCE_LENGTH);
 
                 const xs = tf.tensor2d(sequencesX, [sequencesX.length, SEQUENCE_LENGTH]);
                 const ys = tf.tensor1d(labelsY, 'float32');
@@ -173,10 +169,7 @@ export default function Wortvorhersage() {
         });
 
         return {
-            word2idx,
-            idx2word,
-            vocabSize: uniqueWords.length,
-            tokens: words // Die bereinigte, chronologische Liste aller Wörter des Textes
+            word2idx, idx2word, vocabSize: uniqueWords.length, tokens: words // Die bereinigte, chronologische Liste aller Wörter des Textes
         };
     };
 
@@ -205,8 +198,7 @@ export default function Wortvorhersage() {
         }
 
         return {
-            sequencesX,
-            labelsY
+            sequencesX, labelsY
         };
     };
 
@@ -217,33 +209,28 @@ export default function Wortvorhersage() {
         // 1. Embedding Layer
         // Wandelt die Wort-IDs in dichte Vektoren um
         model.add(tf.layers.embedding({
-            inputDim: vocabSize,
-            outputDim: 50, // Dimensionalität der Einbettung
+            inputDim: vocabSize, outputDim: 50, // Dimensionalität der Einbettung
             inputLength: 5, // Muss der SEQUENCE_LENGTH entsprechen
             embeddingsInitializer: 'glorotUniform' // Diese Methode ist schneller und standardmäßig empfohlen
         }));
 
         // 2. Hidden Layer: LSTM (Mindestens 100 Units laut Aufgabe)
         model.add(tf.layers.lstm({
-            units: 100,
-            returnSequences: false,
-            kernelInitializer: 'glorotUniform', // Initialisierer für die Gewichte
+            units: 100, returnSequences: false, kernelInitializer: 'glorotUniform', // Initialisierer für die Gewichte
             recurrentInitializer: 'glorotUniform' // Initialisierer für die rekurrenten Gewichte
         }));
 
         // 3. Output Layer: Dense Layer mit Softmax
         // Gibt Wahrscheinlichkeiten für jedes mögliche Wort im Vokabular aus
         model.add(tf.layers.dense({
-            units: vocabSize,
-            activation: 'softmax'
+            units: vocabSize, activation: 'softmax'
         }));
 
         // 4. Kompilieren
         // Wir nutzen 'sparseCategoricalCrossentropy', da unsere Labels (Y) einfache IDs und keine One-Hot-Vektoren sind
         model.compile({
             optimizer: tf.train.adam(0.01), // Learning Rate von 0.01 laut Aufgabe
-            loss: 'sparseCategoricalCrossentropy',
-            metrics: ['accuracy']
+            loss: 'sparseCategoricalCrossentropy', metrics: ['accuracy']
         });
 
         // Training starten: Status setzen
@@ -253,9 +240,21 @@ export default function Wortvorhersage() {
         await new Promise(resolve => requestAnimationFrame(resolve));
 
         // Training starten
+        // Training starten
         await model.fit(xs, ys, {
-            epochs: EPOCHS,
-            batchSize: BATCHSIZE,
+            epochs: EPOCHS, batchSize: BATCHSIZE, callbacks: {
+                onEpochBegin: async (epoch) => {
+                    // Setzt die aktuelle Epoche (Index startet bei 0, daher + 1)
+                    setCurrentEpoch(epoch + 1);
+                }, onEpochEnd: async (epoch, logs) => {
+                    // Speichert die aktuellen Werte für die UI
+                    setMetrics({
+                        loss: logs.loss.toFixed(4), acc: (logs.acc * 100).toFixed(1) + '%'
+                    });
+                    // Zwingt TensorFlow, den Haupt-Thread kurz freizugeben, damit React rendern kann
+                    await tf.nextFrame();
+                }
+            }
         });
 
         // Training fertig
@@ -292,15 +291,13 @@ export default function Wortvorhersage() {
         const probabilities = await predictionTensor.data();
 
         const probsArray = Array.from(probabilities).map((prob, index) => ({
-            prob,
-            index
+            prob, index
         }));
 
         probsArray.sort((a, b) => b.prob - a.prob);
 
         const top3 = probsArray.slice(0, 3).map(item => ({
-            word: idx2word[item.index],
-            probability: Math.round(item.prob * 100)
+            word: idx2word[item.index], probability: Math.round(item.prob * 100)
         }));
 
         inputTensor.dispose();
@@ -350,7 +347,7 @@ export default function Wortvorhersage() {
             const xsLive = tf.tensor2d([inputIds], [1, SEQUENCE_LENGTH]);
             const ysLive = tf.tensor1d([targetId], 'float32');
 
-            await model.fit(xsLive, ysLive, { epochs: EPOCHS, verbose: 0 });
+            await model.fit(xsLive, ysLive, {epochs: EPOCHS, verbose: 0});
 
             xsLive.dispose();
             ysLive.dispose();
@@ -375,8 +372,7 @@ export default function Wortvorhersage() {
     }, [isAutoRunning, promptText, predictions]);
 
 
-    return (
-        <div className="container py-5 mb-5 wortvorhersage-page">
+    return (<div className="container py-5 mb-5 wortvorhersage-page">
             <header className="mb-4">
                 <h1 className="display-4 fw-bold dashboard-title mb-3">
                     Wortvorhersage
@@ -387,17 +383,44 @@ export default function Wortvorhersage() {
                 </p>
             </header>
 
-            {!model ? (
-                <div className="container py-5 text-center">
-                    <div className="wortvorhersage-status">
-                        {isTraining
-                            ? <span>Modell lernt gerade...</span>
-                            : 'Modell wird initialisiert...'}
+            {!model ? (<div className="container py-5 text-center">
+                    <div className="card border-0 shadow-sm p-5 mx-auto training-loading-card">
+                        <div className="wortvorhersage-status mb-4">
+                            {isTraining ? (<span
+                                    className="training-status-box">Modell lernt gerade...</span>) : ('Modell wird initialisiert...')}
+                        </div>
+                        {isTraining && (
+                                <div className="mt-2 text-start">
+                                    <div className="d-flex justify-content-between mb-2 training-progress-info">
+                                        <span className="fw-bold text-secondary">
+                                        Epoche {currentEpoch} von {EPOCHS}
+                                        </span>
+                                    </div>
+                                <div className="progress mb-4 training-progress">
+                                    <div
+                                        className="progress-bar progress-bar-striped progress-bar-animated bg-warning"
+                                        role="progressbar"
+                                        style={{width: `${(currentEpoch / EPOCHS) * 100}%`}}
+                                        aria-valuenow={currentEpoch}
+                                        aria-valuemin="0"
+                                        aria-valuemax={EPOCHS}
+                                    />
+                                </div>
+                                <div className="d-flex justify-content-around p-3 rounded training-metrics-box">
+                                    <div className="text-center">
+                                        <span className="training-text small d-block">Loss-Wert</span>
+                                        <strong className="text-danger h5 mb-0">{metrics.loss}</strong>
+                                    </div>
+                                    <div className="text-center">
+                                        <span className="training-text small d-block">Genauigkeit</span>
+                                        <strong className="text-success h5 mb-0">{metrics.acc}</strong>
+                                    </div>
+                                </div>
+                            </div>)}
                     </div>
                 </div>
-            ) : (
-                <div className="card border-0 shadow-sm p-4 mb-4 wortvorhersage-card">
-
+                            ) : (
+                        <div className="card border-0 shadow-sm p-4 mb-4 wortvorhersage-card">
                     <div className="mb-4 text-start">
                         <label
                             htmlFor="promptInput"
@@ -456,30 +479,24 @@ export default function Wortvorhersage() {
                                 Weiter
                             </button>
 
-                            {!isAutoRunning ? (
-                                <button
+                            {!isAutoRunning ? (<button
                                     type="button"
                                     className="btn btn-secondary fw-bold btn-fixed-width"
                                     onClick={() => setIsAutoRunning(true)}
                                     disabled={!model || isTraining}// Button deaktivieren, solange das Modell lädt/trainiert
                                 >
                                     Auto
-                                </button>
-                            ) : (
-                                <button
+                                </button>) : (<button
                                     type="button"
                                     className="btn btn-danger fw-bold btn-fixed-width"
                                     onClick={() => setIsAutoRunning(false)}
                                 >
                                     Stopp
-                                </button>
-                            )}
+                                </button>)}
                         </div>
 
                         <div className="wortvorhersage-status">
-                            {isAutoRunning
-                                ? 'Automatik läuft...'
-                                : 'Warten auf Eingabe'}
+                            {isAutoRunning ? 'Automatik läuft...' : 'Warten auf Eingabe'}
                         </div>
                     </div>
 
@@ -492,9 +509,7 @@ export default function Wortvorhersage() {
                         </h3>
 
                         <div className="prediction-word-list">
-                            {predictions.length > 0 ? (
-                                predictions.map((pred, idx) => (
-                                    <button
+                            {predictions.length > 0 ? (predictions.map((pred, idx) => (<button
                                         key={idx}
                                         type="button"
                                         className="prediction-word-btn"
@@ -504,17 +519,11 @@ export default function Wortvorhersage() {
                                         <span className="badge bg-secondary rounded-pill">
                     {pred.probability}%
                 </span>
-                                    </button>
-                                ))
-                            ) : (
-                                <p className="text-muted"> Noch keine Vorhersage vorhanden.
-                                </p>
-                            )}
+                                    </button>))) : (<p className="text-muted"> Noch keine Vorhersage vorhanden.
+                                </p>)}
                         </div>
                     </div>
 
-                </div>
-            )}
-        </div>
-    );
+                </div>)}
+        </div>);
 }
