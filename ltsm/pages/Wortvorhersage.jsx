@@ -34,7 +34,12 @@ export default function Wortvorhersage() {
                 await tf.setBackend('webgl');
                 await tf.ready();
                 console.log("Backend ist bereit: ", tf.getBackend());
-                const response = await fetch('/model/trainingsdata_Sandwich_Inseln.txt');
+
+                // Grosser Datensatz
+                //const response = await fetch('/model/trainingsdata_big.txt');
+
+                // Kleiner Datensatz
+                const response = await fetch('/model/trainingsdata_small.txt');
                 const rawText = await response.text();
 
                 console.log("Datensatz erfolgreich geladen. Zeichenanzahl:", rawText.length);
@@ -73,6 +78,10 @@ export default function Wortvorhersage() {
                 setTimeout(async () => {
                     const trainedModel = await buildAndTrainModel(xs, ys, vocab.vocabSize);
                     setModel(trainedModel);
+
+                    xs.dispose();
+                    ys.dispose();
+
                     console.log("Modell ist bereit für Vorhersagen!");
                 }, 500);
 
@@ -84,10 +93,48 @@ export default function Wortvorhersage() {
         fetchDataset();
     }, []); // Das leere Array sorgt dafür, dass dies nur einmal beim Mounten passiert
 
-    // Zurücksetzen des Textfelds und Stoppen der Automatik
-    const handleReset = () => {
-        setPromptText('');
+    const handleReset = async () => {
+        // 1. UI-States zurücksetzen
         setIsAutoRunning(false);
+        setPromptText('');
+        setPredictions([]);
+        setIsModelReady(false);
+
+        // 2. Altes Modell aus dem WebGL-Speicher löschen
+        if (model) {
+            model.dispose(); // Gibt GPU-Ressourcen frei
+            setModel(null);
+            console.log("Altes Modell erfolgreich aus dem Speicher gelöscht");
+        }
+
+        // 3. Netzwerk im Ausgangszustand neu erstellen und trainieren
+        if (vocabData) {
+            try {
+                const { sequencesX, labelsY } = createSequences(
+                    vocabData.tokens,
+                    vocabData.word2idx,
+                    SEQUENCE_LENGTH
+                );
+
+                const xs = tf.tensor2d(sequencesX, [sequencesX.length, SEQUENCE_LENGTH]);
+                const ys = tf.tensor1d(labelsY, 'float32');
+
+                // Kurz verzögern, damit die UI den Ladezustand anzeigen kann
+                setTimeout(async () => {
+                    const trainedModel = await buildAndTrainModel(xs, ys, vocabData.vocabSize);
+                    setModel(trainedModel);
+
+                    // Temporäre Tensoren nach dem Training sofort aufräumen
+                    xs.dispose();
+                    ys.dispose();
+
+                    console.log("Modell wurde erfolgreich auf den Ausgangszustand zurückgesetzt!");
+                }, 200);
+
+            } catch (error) {
+                console.error("Fehler beim Reset des Modells:", error);
+            }
+        }
     };
 
     // Text bereinigen und normieren
@@ -334,7 +381,7 @@ export default function Wortvorhersage() {
                 <div className="container py-5 text-center">
                     <div className="wortvorhersage-status">
                         {isTraining
-                            ? <span className="text-warning">Modell lernt gerade...</span>
+                            ? <span className="btn-cta-text">Modell lernt gerade...</span>
                             : 'Modell wird initialisiert...'}
                     </div>
                 </div>
