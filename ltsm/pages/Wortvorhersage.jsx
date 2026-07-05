@@ -5,6 +5,7 @@ import * as tfvis from '@tensorflow/tfjs-vis';
 const SEQUENCE_LENGTH = 5;
 const EPOCHS = 10;
 const BATCHSIZE = 32;
+const TOP_K = 5;
 
 export default function Wortvorhersage() {
 
@@ -40,6 +41,9 @@ export default function Wortvorhersage() {
 
     // Referenz für den Container des tfvis-Diagramms
     const chartRef = useRef(null);
+
+    // State für Doku der Experimente
+    const [experimentHistory, setExperimentHistory] = useState([]);
 
     // Text beim ersten Rendern der Komponente laden
     useEffect(() => {
@@ -299,6 +303,11 @@ export default function Wortvorhersage() {
                         acc: currentAcc
                     }]);
 
+                    // Speichert das Experiment automatisch nach der letzten Epoche
+                    if (epoch === EPOCHS - 1) {
+                        saveExperiment(parseFloat(currentLoss), parseFloat(currentAcc));
+                    }
+
                     // Zwingt TensorFlow, den Haupt-Thread kurz freizugeben, damit React rendern kann
                     await tf.nextFrame();
                 }
@@ -308,6 +317,11 @@ export default function Wortvorhersage() {
         // Training fertig
         setIsModelReady(true);
         setIsTraining(false);
+
+        const finalMetrics = trainingHistory[trainingHistory.length - 1];
+        if (finalMetrics) {
+            saveExperiment(parseFloat(finalMetrics.loss), parseFloat(finalMetrics.acc));
+        }
 
         // Zusammenfassung Architektur zur Überprüfung in Konsole ausgeben
         model.summary();
@@ -344,19 +358,19 @@ export default function Wortvorhersage() {
 
         probsArray.sort((a, b) => b.prob - a.prob);
 
-        const top3 = probsArray.slice(0, 3).map(item => ({
+        const topK = probsArray.slice(0, TOP_K).map(item => ({
             word: idx2word[item.index], probability: Math.round(item.prob * 100)
         }));
 
         inputTensor.dispose();
         predictionTensor.dispose();
 
-        return top3;
+        return topK;
     };
 
     const handlePredictClick = async () => {
-        const top3 = await calculatePrediction(promptText);
-        setPredictions(top3);
+        const topK = await calculatePrediction(promptText);
+        setPredictions(topK);
     };
 
     const handleWordClick = async (word) => {
@@ -365,8 +379,8 @@ export default function Wortvorhersage() {
         setPromptText(updatedText);
 
         // Sofort die neue Vorhersage für den aktualisierten Text berechnen
-        const nextTop3 = await calculatePrediction(updatedText);
-        setPredictions(nextTop3);
+        const nextTopK = await calculatePrediction(updatedText);
+        setPredictions(nextTopK);
     };
 
     // Wird aufgerufen, wenn der Nutzer auf "Vorhersage" klickt
@@ -440,8 +454,8 @@ export default function Wortvorhersage() {
 
             // 4. State aktualisieren (JETZT KORREKT HIER)
             setPromptText(updatedText);
-            const nextTop3 = await calculatePrediction(updatedText);
-            setPredictions(nextTop3);
+            const nextTopK = await calculatePrediction(updatedText);
+            setPredictions(nextTopK);
         }
     };
 
@@ -456,6 +470,18 @@ export default function Wortvorhersage() {
         return () => clearTimeout(timer);
     }, [isAutoRunning, promptText, predictions]);
 
+    const saveExperiment = (loss, acc) => {
+        const newExperiment = {
+            id: experimentHistory.length + 1,
+            seq: SEQUENCE_LENGTH,
+            batch: BATCHSIZE,
+            epochs: EPOCHS,
+            k: TOP_K,
+            loss: loss.toFixed(4),
+            acc: acc.toFixed(4)
+        };
+        setExperimentHistory([...experimentHistory, newExperiment]);
+    };
 
     return (<div className="container py-5 mb-5 wortvorhersage-page">
             <header className="mb-4">
@@ -633,7 +659,38 @@ export default function Wortvorhersage() {
                             }}
                         ></div>
                     </div>
-                    </div>
+                    </div>{/* NEU: Tabelle für Experimente-Dokumentation */}
+            <div className="mt-5">
+                <h5 className="fw-bold mb-3">Dokumentation der Experimente</h5>
+                <div className="table-responsive">
+                    <table className="table table-bordered table-hover">
+                        <thead className="table-light">
+                        <tr>
+                            <th>Nr.</th>
+                            <th>Sequenz</th>
+                            <th>Batch</th>
+                            <th>Epochen</th>
+                            <th>k-Wert</th>
+                            <th>Loss</th>
+                            <th>Genauigkeit</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {experimentHistory.map((exp) => (
+                            <tr key={exp.id}>
+                                <td>{exp.id}</td>
+                                <td>{exp.seq}</td>
+                                <td>{exp.batch}</td>
+                                <td>{exp.epochs}</td>
+                                <td>{exp.k}</td>
+                                <td>{exp.loss}</td>
+                                <td>{exp.acc}</td>
+                            </tr>
+                        ))}
+                        </tbody>
+                    </table>
                 </div>
+            </div>
+    </div>
     );
 }
