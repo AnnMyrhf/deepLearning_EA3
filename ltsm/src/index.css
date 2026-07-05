@@ -7,6 +7,7 @@
     --bg-main: #1a1d20;
     --text-main: #f8f9fa;
     --text-secondary: #adb5bd;
+    --text-alt:#ffc107;
 
     --link-color: #4dabf7;
     --link-hover: #fff;
@@ -86,6 +87,7 @@
     --bg-main: #ffffff;
     --text-main: #212529;
     --text-secondary: #495057;
+    --text-alt: #14528c;
 
     --link-color: #1864ab;
     --link-hover: #000000;
@@ -665,6 +667,10 @@ a:hover {
     color: var(--text-secondary);
     font-size: 0.875rem;
     font-weight: 700;
+}
+
+.wortvorhersage-status >span {
+    color: var(--text-alt);
 }
 
 .wortvorhersage-results {

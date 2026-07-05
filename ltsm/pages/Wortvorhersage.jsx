@@ -314,6 +314,16 @@ export default function Wortvorhersage() {
         setPredictions(top3);
     };
 
+    const handleWordClick = async (word) => {
+        // Text direkt zusammensetzen, um die Asynchronität von React zu umgehen
+        const updatedText = (promptText + ' ' + word).trim();
+        setPromptText(updatedText);
+
+        // Sofort die neue Vorhersage für den aktualisierten Text berechnen
+        const nextTop3 = await calculatePrediction(updatedText);
+        setPredictions(nextTop3);
+    };
+
     // Wird aufgerufen, wenn der Nutzer auf "Vorhersage" klickt
     const handleNext = async () => {
         if (predictions.length > 0) {
@@ -381,7 +391,7 @@ export default function Wortvorhersage() {
                 <div className="container py-5 text-center">
                     <div className="wortvorhersage-status">
                         {isTraining
-                            ? <span className="btn-cta-text">Modell lernt gerade...</span>
+                            ? <span>Modell lernt gerade...</span>
                             : 'Modell wird initialisiert...'}
                     </div>
                 </div>
@@ -488,8 +498,7 @@ export default function Wortvorhersage() {
                                         key={idx}
                                         type="button"
                                         className="prediction-word-btn"
-                                        // Optional: Bei Klick das Wort zum promptText hinzufügen
-                                        onClick={() => setPromptText(promptText + ' ' + pred.word)}
+                                        onClick={() => handleWordClick(pred.word)}
                                     >
                                         <span>{pred.word}</span>
                                         <span className="badge bg-secondary rounded-pill">
