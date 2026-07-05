@@ -2,7 +2,7 @@ import React, {useState, useEffect} from 'react';
 import * as tf from '@tensorflow/tfjs'
 
 const SEQUENCE_LENGTH = 5;
-const EPOCHS = 200;
+const EPOCHS = 20;
 const BATCHSIZE = 32;
 
 export default function Wortvorhersage() {
@@ -26,6 +26,9 @@ export default function Wortvorhersage() {
     const [isTraining, setIsTraining] = useState(false);
 
     const [isModelReady, setIsModelReady] = useState(false);
+
+    // States für Endloschleifen bei Automatik-Funktion
+    const [endlessWarning, setEndlessWarning] = useState('');
 
     // States fuer den Traningsfortschritt
     const [currentEpoch, setCurrentEpoch] = useState(0);
@@ -99,6 +102,7 @@ export default function Wortvorhersage() {
         setPromptText('');
         setPredictions([]);
         setIsModelReady(false);
+        setEndlessWarning('');
 
         // 2. Altes Modell aus dem WebGL-Speicher löschen
         if (model) {
@@ -240,7 +244,6 @@ export default function Wortvorhersage() {
         await new Promise(resolve => requestAnimationFrame(resolve));
 
         // Training starten
-        // Training starten
         await model.fit(xs, ys, {
             epochs: EPOCHS, batchSize: BATCHSIZE, callbacks: {
                 onEpochBegin: async (epoch) => {
@@ -327,6 +330,22 @@ export default function Wortvorhersage() {
             const bestWord = predictions[0].word;
             const updatedText = (promptText + ' ' + bestWord).trim();
 
+            // Endlosschleifen erkennen
+            const wordsArray = updatedText.split(' ');
+            if (wordsArray.length >= 5) {
+                const lastFiveWords = wordsArray.slice(-5);
+                // Prüfen, ob das exakt selbe Wort 5-mal hintereinander kam
+                const isLooping = lastFiveWords.every(word => word === bestWord);
+
+                if (isLooping) {
+                    setIsAutoRunning(false); // Stoppt den Auto-Modus sofort
+                    setEndlessWarning('Modell-Kollaps erkannt! Das Netzwerk wiederholt sich unendlich. Bitte auf "Zurücksetzen" klicken.');
+                    setPromptText(updatedText);
+                    return; // Bricht das weitere Training ab, um die Gewichte zu schützen
+                }
+            }
+            // Warnung löschen, wenn alles normal läuft
+            setEndlessWarning('');
             // 1. Tokens sicher aufbereiten (Padding)
             const cleanedText = cleanText(updatedText);
             let inputTokens = cleanedText.split(' ').filter(word => word.length > 0);
@@ -498,6 +517,11 @@ export default function Wortvorhersage() {
                         <div className="wortvorhersage-status">
                             {isAutoRunning ? 'Automatik läuft...' : 'Warten auf Eingabe'}
                         </div>
+                        {endlessWarning && (
+                            <div className="alert alert-danger mt-3 mx-auto model-collapse-alert" role="alert">
+                                <strong>Hinweis:</strong> {endlessWarning}
+                            </div>
+                        )}
                     </div>
 
                     <div
