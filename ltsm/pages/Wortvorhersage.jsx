@@ -1,8 +1,9 @@
-import React, {useState, useEffect} from 'react';
-import * as tf from '@tensorflow/tfjs'
+import React, { useState, useEffect, useRef } from 'react';
+import * as tf from '@tensorflow/tfjs';
+import * as tfvis from '@tensorflow/tfjs-vis';
 
 const SEQUENCE_LENGTH = 5;
-const EPOCHS = 20;
+const EPOCHS = 10;
 const BATCHSIZE = 32;
 
 export default function Wortvorhersage() {
@@ -34,13 +35,18 @@ export default function Wortvorhersage() {
     const [currentEpoch, setCurrentEpoch] = useState(0);
     const [metrics, setMetrics] = useState({loss: '-', acc: '-'});
 
+    // State für den Traningsverlauf
+    const [trainingHistory, setTrainingHistory] = useState([]);
+
+    // Referenz für den Container des tfvis-Diagramms
+    const chartRef = useRef(null);
+
     // Text beim ersten Rendern der Komponente laden
     useEffect(() => {
         const fetchDataset = async () => {
             try {
                 await tf.setBackend('webgl');
                 await tf.ready();
-                console.log("Backend ist bereit: ", tf.getBackend());
 
                 // Grosser Datensatz
                 //const response = await fetch('/model/trainingsdata_big.txt');
@@ -96,6 +102,34 @@ export default function Wortvorhersage() {
         fetchDataset();
     }, []); // Das leere Array sorgt dafür, dass dies nur einmal beim Mounten passiert
 
+    // Effect zum Zeichnen des tfvis Diagramms, sobald sich die History ändert
+    useEffect(() => {
+        if (!chartRef.current) return;
+
+        if (trainingHistory.length === 0) {
+            chartRef.current.innerHTML = '';
+            return;
+        }
+        const lossData = trainingHistory.map((d, i) => ({x: i + 1, y: d.loss}));
+        const accData = trainingHistory.map((d, i) => ({x: i + 1, y: d.acc}));
+
+        const data = {
+            values: [lossData, accData],
+            series: ['Loss', 'Genauigkeit']
+        };
+
+        const options = {
+            xLabel: 'Epoche)',
+            yLabel: 'Wert',
+            height: 300
+        };
+
+        //chartRef.current.innerHTML = '';
+
+        tfvis.render.linechart(chartRef.current, data, options);
+
+    }, [trainingHistory]);
+
     const handleReset = async () => {
         // 1. UI-States zurücksetzen
         setIsAutoRunning(false);
@@ -103,6 +137,7 @@ export default function Wortvorhersage() {
         setPredictions([]);
         setIsModelReady(false);
         setEndlessWarning('');
+        setTrainingHistory([]);
 
         // 2. Altes Modell aus dem WebGL-Speicher löschen
         if (model) {
@@ -239,6 +274,7 @@ export default function Wortvorhersage() {
 
         // Training starten: Status setzen
         setIsTraining(true);
+        setTrainingHistory([]); // Verlauf vor dem Initialtraining leeren
 
         /// Gib dem Browser Zeit für ein Rendering-Update
         await new Promise(resolve => requestAnimationFrame(resolve));
@@ -250,10 +286,19 @@ export default function Wortvorhersage() {
                     // Setzt die aktuelle Epoche (Index startet bei 0, daher + 1)
                     setCurrentEpoch(epoch + 1);
                 }, onEpochEnd: async (epoch, logs) => {
-                    // Speichert die aktuellen Werte für die UI
+                    const currentLoss = logs.loss.toFixed(4);
+                    const currentAcc = logs.accuracy !== undefined ? logs.accuracy : logs.acc;                    // Speichert die aktuellen Werte für die UI
                     setMetrics({
-                        loss: logs.loss.toFixed(4), acc: (logs.acc * 100).toFixed(1) + '%'
+                        loss: logs.loss.toFixed(4), acc: (currentAcc * 100).toFixed(1) + '%'
                     });
+
+                    setTrainingHistory(prev => [...prev, {
+                        id: `I-${epoch + 1}`,
+                        label: `Epoche ${epoch + 1}`,
+                        loss: currentLoss,
+                        acc: currentAcc
+                    }]);
+
                     // Zwingt TensorFlow, den Haupt-Thread kurz freizugeben, damit React rendern kann
                     await tf.nextFrame();
                 }
@@ -339,7 +384,7 @@ export default function Wortvorhersage() {
 
                 if (isLooping) {
                     setIsAutoRunning(false); // Stoppt den Auto-Modus sofort
-                    setEndlessWarning('Modell-Kollaps erkannt! Das Netzwerk wiederholt sich unendlich. Bitte auf "Zurücksetzen" klicken.');
+                    setEndlessWarning('Modell-Kollaps erkannt! Bitte auf "Zurücksetzen" klicken.');
                     setPromptText(updatedText);
                     return; // Bricht das weitere Training ab, um die Gewichte zu schützen
                 }
@@ -366,7 +411,28 @@ export default function Wortvorhersage() {
             const xsLive = tf.tensor2d([inputIds], [1, SEQUENCE_LENGTH]);
             const ysLive = tf.tensor1d([targetId], 'float32');
 
-            await model.fit(xsLive, ysLive, {epochs: EPOCHS, verbose: 0});
+            await model.fit(xsLive, ysLive, {
+                epochs: 1,
+                verbose: 0,
+                callbacks: {
+                    onEpochEnd: async (epoch, logs) => {
+                        const liveLoss = logs.loss.toFixed(4);
+                        const liveAcc = logs.accuracy !== undefined ? logs.accuracy : logs.acc;
+
+                        setMetrics({
+                            loss: liveLoss, acc: (liveAcc * 100).toFixed(1) + '%'
+                        });
+
+                        // Online-Learning Schritte ebenfalls visualisieren
+                        setTrainingHistory(prev => [...prev, {
+                            id: `L-${Date.now()}`,
+                            label: `Live-Schritt`,
+                            loss: liveLoss,
+                            acc: liveAcc
+                        }]);
+                    }
+                }
+            });
 
             xsLive.dispose();
             ysLive.dispose();
@@ -406,15 +472,15 @@ export default function Wortvorhersage() {
                     <div className="card border-0 shadow-sm p-5 mx-auto training-loading-card">
                         <div className="wortvorhersage-status mb-4">
                             {isTraining ? (<span
-                                    className="training-status-box">Modell lernt gerade...</span>) : ('Modell wird initialisiert...')}
+                                className="training-status-box">Modell lernt gerade...</span>) : ('Modell wird initialisiert...')}
                         </div>
                         {isTraining && (
-                                <div className="mt-2 text-start">
-                                    <div className="d-flex justify-content-between mb-2 training-progress-info">
+                            <div className="mt-2 text-start">
+                                <div className="d-flex justify-content-between mb-2 training-progress-info">
                                         <span className="fw-bold text-secondary">
                                         Epoche {currentEpoch} von {EPOCHS}
                                         </span>
-                                    </div>
+                                </div>
                                 <div className="progress mb-4 training-progress">
                                     <div
                                         className="progress-bar progress-bar-striped progress-bar-animated bg-warning"
@@ -438,8 +504,8 @@ export default function Wortvorhersage() {
                             </div>)}
                     </div>
                 </div>
-                            ) : (
-                        <div className="card border-0 shadow-sm p-4 mb-4 wortvorhersage-card">
+            ) : (
+                <div className="card border-0 shadow-sm p-4 mb-4 wortvorhersage-card">
                     <div className="mb-4 text-start">
                         <label
                             htmlFor="promptInput"
@@ -499,19 +565,19 @@ export default function Wortvorhersage() {
                             </button>
 
                             {!isAutoRunning ? (<button
-                                    type="button"
-                                    className="btn btn-secondary fw-bold btn-fixed-width"
-                                    onClick={() => setIsAutoRunning(true)}
-                                    disabled={!model || isTraining}// Button deaktivieren, solange das Modell lädt/trainiert
-                                >
-                                    Auto
-                                </button>) : (<button
-                                    type="button"
-                                    className="btn btn-danger fw-bold btn-fixed-width"
-                                    onClick={() => setIsAutoRunning(false)}
-                                >
-                                    Stopp
-                                </button>)}
+                                type="button"
+                                className="btn btn-secondary fw-bold btn-fixed-width"
+                                onClick={() => setIsAutoRunning(true)}
+                                disabled={!model || isTraining}// Button deaktivieren, solange das Modell lädt/trainiert
+                            >
+                                Auto
+                            </button>) : (<button
+                                type="button"
+                                className="btn btn-danger fw-bold btn-fixed-width"
+                                onClick={() => setIsAutoRunning(false)}
+                            >
+                                Stopp
+                            </button>)}
                         </div>
 
                         <div className="wortvorhersage-status">
@@ -534,20 +600,40 @@ export default function Wortvorhersage() {
 
                         <div className="prediction-word-list">
                             {predictions.length > 0 ? (predictions.map((pred, idx) => (<button
-                                        key={idx}
-                                        type="button"
-                                        className="prediction-word-btn"
-                                        onClick={() => handleWordClick(pred.word)}
-                                    >
-                                        <span>{pred.word}</span>
-                                        <span className="badge bg-secondary rounded-pill">
+                                key={idx}
+                                type="button"
+                                className="prediction-word-btn"
+                                onClick={() => handleWordClick(pred.word)}
+                            >
+                                <span>{pred.word}</span>
+                                <span className="badge bg-secondary rounded-pill">
                     {pred.probability}%
                 </span>
-                                    </button>))) : (<p className="text-muted"> Noch keine Vorhersage vorhanden.
-                                </p>)}
+                            </button>))) : (<p className="text-muted"> Noch keine Vorhersage vorhanden.
+                            </p>)}
                         </div>
                     </div>
-
-                </div>)}
-        </div>);
+                </div>
+                    )}
+                    {/* Diagramm fuer Trainingsdaten */}
+                    <div className="mt-4">
+                        <h5 className="fw-bold mb-2">
+                            Trainingsverlauf
+                        </h5>
+                    <div className="chart-container-wrapper p-3 border rounded bg-light">
+                          {trainingHistory.length === 0 && (
+                            <p className="text-muted small">Warte auf Trainingsdaten...</p>
+                        )}
+                        <div
+                            ref={chartRef}
+                            className="w-100"
+                            style={{
+                                minHeight: '300px',
+                                display: trainingHistory.length > 0 ? 'block' : 'none'
+                            }}
+                        ></div>
+                    </div>
+                    </div>
+                </div>
+    );
 }
