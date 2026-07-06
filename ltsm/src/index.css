@@ -7,7 +7,7 @@
     --bg-main: #1a1d20;
     --text-main: #f8f9fa;
     --text-secondary: #adb5bd;
-    --text-alt:#ffc107;
+    --text-alt: #ffc107;
 
     --link-color: #4dabf7;
     --link-hover: #fff;
@@ -786,6 +786,10 @@ a:hover {
 .chart-container-wrapper h5 {
     color: var(--text-main);
     margin-bottom: 1rem;
+}
+
+.chart-container-wrapper-text {
+    color: var(--status-error-border);
 }
 
 #training-chart-container {

@@ -55,8 +55,11 @@ export default function Wortvorhersage() {
                 // Grosser Datensatz
                 //const response = await fetch('/model/trainingsdata_big.txt');
 
+                // Mittelgrosser Datensatz
+                // const response = await fetch('/model/trainingsdata_medium.txt');
+
                 // Kleiner Datensatz
-                const response = await fetch('/model/trainingsdata_small.txt');
+               const response = await fetch('/model/trainingsdata_small.txt');
                 const rawText = await response.text();
 
                 console.log("Datensatz erfolgreich geladen. Zeichenanzahl:", rawText.length);
@@ -123,7 +126,7 @@ export default function Wortvorhersage() {
         };
 
         const options = {
-            xLabel: 'Epoche)',
+            xLabel: 'Epoche',
             yLabel: 'Wert',
             height: 300
         };
@@ -249,18 +252,26 @@ export default function Wortvorhersage() {
     const buildAndTrainModel = async (xs, ys, vocabSize) => {
         const model = tf.sequential();
 
-        // 1. Embedding Layer
+        // Embedding Layer
         // Wandelt die Wort-IDs in dichte Vektoren um
         model.add(tf.layers.embedding({
             inputDim: vocabSize, outputDim: 50, // Dimensionalität der Einbettung
-            inputLength: 5, // Muss der SEQUENCE_LENGTH entsprechen
+            inputLength: SEQUENCE_LENGTH, // Muss der SEQUENCE_LENGTH entsprechen
             embeddingsInitializer: 'glorotUniform' // Diese Methode ist schneller und standardmäßig empfohlen
+        }));
+
+        // 1. Hidden Layer: LSTM (Mindestens 100 Units laut Aufgabe)
+        model.add(tf.layers.lstm({
+            units: 100, returnSequences: true, kernelInitializer: 'glorotUniform', // Initialisierer für die Gewichte
+            recurrentInitializer: 'glorotUniform' // Initialisierer für die rekurrenten Gewichte
         }));
 
         // 2. Hidden Layer: LSTM (Mindestens 100 Units laut Aufgabe)
         model.add(tf.layers.lstm({
-            units: 100, returnSequences: false, kernelInitializer: 'glorotUniform', // Initialisierer für die Gewichte
-            recurrentInitializer: 'glorotUniform' // Initialisierer für die rekurrenten Gewichte
+            units: 100,
+            returnSequences: false,
+            kernelInitializer: 'glorotUniform',
+            recurrentInitializer: 'glorotUniform'
         }));
 
         // 3. Output Layer: Dense Layer mit Softmax
@@ -317,11 +328,6 @@ export default function Wortvorhersage() {
         // Training fertig
         setIsModelReady(true);
         setIsTraining(false);
-
-        const finalMetrics = trainingHistory[trainingHistory.length - 1];
-        if (finalMetrics) {
-            saveExperiment(parseFloat(finalMetrics.loss), parseFloat(finalMetrics.acc));
-        }
 
         // Zusammenfassung Architektur zur Überprüfung in Konsole ausgeben
         model.summary();
@@ -405,54 +411,8 @@ export default function Wortvorhersage() {
             }
             // Warnung löschen, wenn alles normal läuft
             setEndlessWarning('');
-            // 1. Tokens sicher aufbereiten (Padding)
-            const cleanedText = cleanText(updatedText);
-            let inputTokens = cleanedText.split(' ').filter(word => word.length > 0);
 
-            if (inputTokens.length > SEQUENCE_LENGTH) {
-                inputTokens = inputTokens.slice(-SEQUENCE_LENGTH);
-            } else if (inputTokens.length < SEQUENCE_LENGTH) {
-                const padding = Array(SEQUENCE_LENGTH - inputTokens.length).fill('<OOV>');
-                inputTokens = [...padding, ...inputTokens];
-            }
-
-            // 2. IDs umwandeln
-            const inputIds = inputTokens.map(word => vocabData.word2idx[word] ?? vocabData.word2idx['<OOV>']);
-            const targetId = vocabData.word2idx[bestWord];
-
-            // 3. Training
-            setIsTraining(true);
-            const xsLive = tf.tensor2d([inputIds], [1, SEQUENCE_LENGTH]);
-            const ysLive = tf.tensor1d([targetId], 'float32');
-
-            await model.fit(xsLive, ysLive, {
-                epochs: 1,
-                verbose: 0,
-                callbacks: {
-                    onEpochEnd: async (epoch, logs) => {
-                        const liveLoss = logs.loss.toFixed(4);
-                        const liveAcc = logs.accuracy !== undefined ? logs.accuracy : logs.acc;
-
-                        setMetrics({
-                            loss: liveLoss, acc: (liveAcc * 100).toFixed(1) + '%'
-                        });
-
-                        // Online-Learning Schritte ebenfalls visualisieren
-                        setTrainingHistory(prev => [...prev, {
-                            id: `L-${Date.now()}`,
-                            label: `Live-Schritt`,
-                            loss: liveLoss,
-                            acc: liveAcc
-                        }]);
-                    }
-                }
-            });
-
-            xsLive.dispose();
-            ysLive.dispose();
-            setIsTraining(false);
-
-            // 4. State aktualisieren (JETZT KORREKT HIER)
+            // State aktualisieren und nächste Vorhersage anstoß
             setPromptText(updatedText);
             const nextTopK = await calculatePrediction(updatedText);
             setPredictions(nextTopK);
@@ -648,7 +608,7 @@ export default function Wortvorhersage() {
                         </h5>
                     <div className="chart-container-wrapper p-3 border rounded bg-light">
                           {trainingHistory.length === 0 && (
-                            <p className="text-muted small">Warte auf Trainingsdaten...</p>
+                            <p className="chart-container-wrapper-text small">Warte auf Trainingsdaten...</p>
                         )}
                         <div
                             ref={chartRef}
@@ -659,7 +619,7 @@ export default function Wortvorhersage() {
                             }}
                         ></div>
                     </div>
-                    </div>{/* NEU: Tabelle für Experimente-Dokumentation */}
+                    </div>
             <div className="mt-5">
                 <h5 className="fw-bold mb-3">Dokumentation der Experimente</h5>
                 <div className="table-responsive">
