@@ -798,7 +798,48 @@ a:hover {
 }
 
 /* =========================================
-   8. UTILITIES
+   8. TABELLEN-STYLING
+   ========================================= */
+
+.experiment-table-wrapper {
+    overflow-x: auto;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 1rem;
+    padding: 1rem;
+}
+
+.experiment-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--text-main);
+}
+
+.experiment-table th {
+    text-align: left;
+    padding: 1rem;
+    border-bottom: 2px solid var(--border-color);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.05rem;
+}
+
+.experiment-table td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.experiment-table tr:hover {
+    background-color: color-mix(in srgb, var(--text-secondary), transparent 90%);
+}
+
+.experiment-table tr:last-child td {
+    border-bottom: none;
+}
+
+/* =========================================
+   9. UTILITIES
    ========================================= */
 
 .container {

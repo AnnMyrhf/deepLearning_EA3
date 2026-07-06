@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import * as tf from '@tensorflow/tfjs';
 import * as tfvis from '@tensorflow/tfjs-vis';
 
-const SEQUENCE_LENGTH = 5;
-const EPOCHS = 15;
-const BATCHSIZE = 32;
-const TOP_K = 3;
+const SEQUENCE_LENGTH = 10;
+const EPOCHS = 35;
+const BATCHSIZE = 16;
+const TOP_K = 5;
+const LEARNING_RATE = 0.005;
 
 export default function Wortvorhersage() {
 
@@ -38,6 +39,7 @@ export default function Wortvorhersage() {
 
     // State für den Traningsverlauf
     const [trainingHistory, setTrainingHistory] = useState([]);
+    const trainingId = useRef(0);
 
     // Referenz für den Container des tfvis-Diagramms
     const chartRef = useRef(null);
@@ -56,10 +58,10 @@ export default function Wortvorhersage() {
                 //const response = await fetch('/model/trainingsdata_big.txt');
 
                 // Mittelgrosser Datensatz
-                // const response = await fetch('/model/trainingsdata_medium.txt');
+                const response = await fetch('/model/trainingsdata_medium.txt');
 
                 // Kleiner Datensatz
-               const response = await fetch('/model/trainingsdata_small.txt');
+              // const response = await fetch('/model/trainingsdata_small.txt');
                 const rawText = await response.text();
 
                 console.log("Datensatz erfolgreich geladen. Zeichenanzahl:", rawText.length);
@@ -77,14 +79,17 @@ export default function Wortvorhersage() {
                 console.log("Größe des Vokabulars:", vocab.vocabSize);
 
                 // 4. Sequenzen erstellen (laut Aufgabe mit Längen wie 5, 10, 15 experimentieren)
-                const {sequencesX, labelsY} = createSequences(vocab.tokens, vocab.word2idx, SEQUENCE_LENGTH);
-
+                const tensorBatches = createSequencesAsTensors(vocab.tokens, vocab.word2idx, SEQUENCE_LENGTH);
                 // 3. In TensorFlow Tensoren umwandeln
                 // xs wird ein 2D-Tensor: [Anzahl_Sequenzen, Sequenzlänge]
-                const xs = tf.tensor2d(sequencesX, [sequencesX.length, SEQUENCE_LENGTH]);
+                const xs = tf.concat(tensorBatches.map(b => b.xs));
+                const ys = tf.concat(tensorBatches.map(b => b.ys));
 
-                // ys wird ein 1D-Tensor mit den Ziel-IDs
-                const ys = tf.tensor1d(labelsY, 'float32');
+                // Die einzelnen Batches sofort aus dem Speicher löschen
+                tensorBatches.forEach(b => {
+                    b.xs.dispose();
+                    b.ys.dispose();
+                });
 
                 console.log("Tensoren erfolgreich erstellt!");
                 console.log("Shape von X (Eingabe):", xs.shape);
@@ -95,6 +100,7 @@ export default function Wortvorhersage() {
                     const trainedModel = await buildAndTrainModel(xs, ys, vocab.vocabSize);
                     setModel(trainedModel);
 
+                    // Finale Tensoren aufräumen, nachdem das Modell sie kopiert hat
                     xs.dispose();
                     ys.dispose();
 
@@ -112,11 +118,11 @@ export default function Wortvorhersage() {
     // Effect zum Zeichnen des tfvis Diagramms, sobald sich die History ändert
     useEffect(() => {
         if (!chartRef.current) return;
+        chartRef.current.innerHTML = '';
 
-        if (trainingHistory.length === 0) {
-            chartRef.current.innerHTML = '';
+        if (trainingHistory.length === 0)
             return;
-        }
+
         const lossData = trainingHistory.map((d, i) => ({x: i + 1, y: d.loss}));
         const accData = trainingHistory.map((d, i) => ({x: i + 1, y: d.acc}));
 
@@ -128,13 +134,10 @@ export default function Wortvorhersage() {
         const options = {
             xLabel: 'Epoche',
             yLabel: 'Wert',
-            height: 300
+            height: 300,
         };
 
-        //chartRef.current.innerHTML = '';
-
         tfvis.render.linechart(chartRef.current, data, options);
-
     }, [trainingHistory]);
 
     const handleReset = async () => {
@@ -150,16 +153,22 @@ export default function Wortvorhersage() {
         if (model) {
             model.dispose(); // Gibt GPU-Ressourcen frei
             setModel(null);
-            console.log("Altes Modell erfolgreich aus dem Speicher gelöscht");
         }
 
         // 3. Netzwerk im Ausgangszustand neu erstellen und trainieren
         if (vocabData) {
             try {
-                const {sequencesX, labelsY} = createSequences(vocabData.tokens, vocabData.word2idx, SEQUENCE_LENGTH);
+                const tensorBatches = createSequencesAsTensors(vocabData.tokens, vocabData.word2idx, SEQUENCE_LENGTH);
 
-                const xs = tf.tensor2d(sequencesX, [sequencesX.length, SEQUENCE_LENGTH]);
-                const ys = tf.tensor1d(labelsY, 'float32');
+                // Zusammenführen
+                const xs = tf.concat(tensorBatches.map(b => b.xs));
+                const ys = tf.concat(tensorBatches.map(b => b.ys));
+
+                // Aufräumen der Batches
+                tensorBatches.forEach(b => {
+                    b.xs.dispose();
+                    b.ys.dispose();
+                });
 
                 // Kurz verzögern, damit die UI den Ladezustand anzeigen kann
                 setTimeout(async () => {
@@ -195,61 +204,81 @@ export default function Wortvorhersage() {
 
     // Hilfsfunktion, um Vokabular und Mappings erstellen
     const buildVocabulary = (text) => {
-        // Text an den Leerzeichen in ein Array aus Wörtern aufteilen
+        // 1. Text an Leerzeichen aufteilen (erzeugt Array, ist okay bei modernem JS)
         const words = text.split(' ');
 
-        // Ein Set filtert automatisch alle Duplikate heraus
-        const uniqueWords = [...new Set(words)];
+        // 2. Map verwenden, um die Häufigkeit zu zählen und Unikate zu finden
+        // Eine Map ist bei großen Datenmengen effizienter als ein Object
+        const wordCounts = new Map();
 
-        // WICHTIG: Das geforderte OOV-Token (Out of Vocabulary) für unbekannte Wörter hinzufügen
-        // Wir setzen es ganz an den Anfang (Index 0)
-        uniqueWords.unshift('<OOV>');
+        for (const word of words) {
+            if (!wordCounts.has(word)) {
+                wordCounts.set(word, true);
+            }
+        }
+
+        // 3. Vokabular-Liste erstellen
+        // Wir fügen das OOV-Token direkt am Anfang hinzu
+        const uniqueWords = ['<OOV>', ...wordCounts.keys()];
 
         const word2idx = {};
         const idx2word = {};
 
-        // Mappings befüllen
+        // 4. Mappings effizient befüllen
         uniqueWords.forEach((word, index) => {
             word2idx[word] = index;
             idx2word[index] = word;
         });
 
         return {
-            word2idx, idx2word, vocabSize: uniqueWords.length, tokens: words // Die bereinigte, chronologische Liste aller Wörter des Textes
+            word2idx,
+            idx2word,
+            vocabSize: uniqueWords.length,
+            tokens: words
         };
     };
 
     // Trainingssequenzen erstellen
-    const createSequences = (tokens, word2idx, sequenceLength = 5) => {
+    const createSequencesAsTensors = (tokens, word2idx, sequenceLength = 5, chunkSize = 1000) => {
         const sequencesX = [];
         const labelsY = [];
+        const tensors = [];
 
-        // Wir iterieren durch das Array, stoppen aber früh genug,
-        // damit wir am Ende nicht über das Array hinausschießen
         for (let i = 0; i < tokens.length - sequenceLength; i++) {
-
-            // Schneide ein Fenster der Länge sequenceLength aus
             const sequenceTokens = tokens.slice(i, i + sequenceLength);
-
-            // Das Wort direkt nach dem Fenster ist unser Ziel
             const targetToken = tokens[i + sequenceLength];
 
-            // Wandle die Wörter in ihre entsprechenden IDs (Zahlen) um
             const sequenceIds = sequenceTokens.map(word => word2idx[word] ?? 0);
             const targetId = word2idx[targetToken] ?? 0;
 
-            // Füge sie unseren finalen Arrays hinzu
             sequencesX.push(sequenceIds);
             labelsY.push(targetId);
+
+            // Wenn die Chunk-Größe erreicht ist, erzeuge einen Tensor und leere die Arrays
+            if (sequencesX.length >= chunkSize) {
+                tensors.push({
+                    xs: tf.tensor2d(sequencesX, [sequencesX.length, sequenceLength]),
+                    ys: tf.tensor1d(labelsY, 'float32')
+                });
+                sequencesX.length = 0;
+                labelsY.length = 0;
+            }
         }
 
-        return {
-            sequencesX, labelsY
-        };
+        // Restliche Daten verarbeiten
+        if (sequencesX.length > 0) {
+            tensors.push({
+                xs: tf.tensor2d(sequencesX, [sequencesX.length, sequenceLength]),
+                ys: tf.tensor1d(labelsY, 'float32')
+            });
+        }
+
+        return tensors; // Gibt ein Array von Tensor-Paaren zurück
     };
 
     // Model trainieren
     const buildAndTrainModel = async (xs, ys, vocabSize) => {
+        const currentTraining = ++trainingId.current;
         const model = tf.sequential();
 
         // Embedding Layer
@@ -262,17 +291,17 @@ export default function Wortvorhersage() {
 
         // 1. Hidden Layer: LSTM (Mindestens 100 Units laut Aufgabe)
         model.add(tf.layers.lstm({
-            units: 100, returnSequences: true, kernelInitializer: 'glorotUniform', // Initialisierer für die Gewichte
+            units: 100, returnSequences: false, kernelInitializer: 'glorotUniform', // Initialisierer für die Gewichte
             recurrentInitializer: 'glorotUniform' // Initialisierer für die rekurrenten Gewichte
         }));
 
         // 2. Hidden Layer: LSTM (Mindestens 100 Units laut Aufgabe)
-        model.add(tf.layers.lstm({
-            units: 100,
-            returnSequences: false,
-            kernelInitializer: 'glorotUniform',
-            recurrentInitializer: 'glorotUniform'
-        }));
+        // model.add(tf.layers.lstm({
+        //     units: 100,
+        //     returnSequences: false,
+        //     kernelInitializer: 'glorotUniform',
+        //     recurrentInitializer: 'glorotUniform'
+        // }));
 
         // 3. Output Layer: Dense Layer mit Softmax
         // Gibt Wahrscheinlichkeiten für jedes mögliche Wort im Vokabular aus
@@ -283,7 +312,7 @@ export default function Wortvorhersage() {
         // 4. Kompilieren
         // Wir nutzen 'sparseCategoricalCrossentropy', da unsere Labels (Y) einfache IDs und keine One-Hot-Vektoren sind
         model.compile({
-            optimizer: tf.train.adam(0.01), // Learning Rate von 0.01 laut Aufgabe
+            optimizer: tf.train.adam(LEARNING_RATE),
             loss: 'sparseCategoricalCrossentropy', metrics: ['accuracy']
         });
 
@@ -296,30 +325,38 @@ export default function Wortvorhersage() {
 
         // Training starten
         await model.fit(xs, ys, {
-            epochs: EPOCHS, batchSize: BATCHSIZE, callbacks: {
+            epochs: EPOCHS,
+            batchSize: BATCHSIZE,
+            callbacks: {
                 onEpochBegin: async (epoch) => {
-                    // Setzt die aktuelle Epoche (Index startet bei 0, daher + 1)
                     setCurrentEpoch(epoch + 1);
-                }, onEpochEnd: async (epoch, logs) => {
-                    const currentLoss = logs.loss.toFixed(4);
-                    const currentAcc = logs.accuracy !== undefined ? logs.accuracy : logs.acc;                    // Speichert die aktuellen Werte für die UI
+                },
+                onEpochEnd: async (epoch, logs) => {
+                    if (currentTraining !== trainingId.current) {
+                        return;
+                    }
+                    // Werte für die UI und History vorbereiten
+                    const lossVal = logs.loss;
+                    const accVal = logs.accuracy !== undefined ? logs.accuracy : logs.acc;
+
+                    // 1. UI-Metriken aktualisieren
                     setMetrics({
-                        loss: logs.loss.toFixed(4), acc: (currentAcc * 100).toFixed(1) + '%'
+                        loss: lossVal.toFixed(4),
+                        acc: (accVal * 100).toFixed(1) + '%'
                     });
 
+                    // 2. Training-History für das manuelle tfvis-Diagramm aktualisieren
                     setTrainingHistory(prev => [...prev, {
-                        id: `I-${epoch + 1}`,
-                        label: `Epoche ${epoch + 1}`,
-                        loss: currentLoss,
-                        acc: currentAcc
+                        loss: lossVal,
+                        acc: accVal
                     }]);
 
-                    // Speichert das Experiment automatisch nach der letzten Epoche
+                    // 3. Experiment in die Tabelle speichern, wenn fertig
                     if (epoch === EPOCHS - 1) {
-                        saveExperiment(parseFloat(currentLoss), parseFloat(currentAcc));
+                        saveExperiment(lossVal, accVal);
                     }
 
-                    // Zwingt TensorFlow, den Haupt-Thread kurz freizugeben, damit React rendern kann
+                    // 4. Thread freigeben
                     await tf.nextFrame();
                 }
             }
@@ -433,6 +470,7 @@ export default function Wortvorhersage() {
     const saveExperiment = (loss, acc) => {
         const newExperiment = {
             id: experimentHistory.length + 1,
+            learning: LEARNING_RATE,
             seq: SEQUENCE_LENGTH,
             batch: BATCHSIZE,
             epochs: EPOCHS,
@@ -554,7 +592,7 @@ export default function Wortvorhersage() {
                                 type="button"
                                 className="btn btn-secondary fw-bold btn-fixed-width"
                                 onClick={() => setIsAutoRunning(true)}
-                                disabled={!model || isTraining}// Button deaktivieren, solange das Modell lädt/trainiert
+                                disabled={!model || isTraining || predictions.length === 0}// Button deaktivieren, solange das Modell lädt/trainiert
                             >
                                 Auto
                             </button>) : (<button
@@ -626,11 +664,10 @@ export default function Wortvorhersage() {
                     <table className="table table-bordered table-hover">
                         <thead className="table-light">
                         <tr>
-                            <th>Nr.</th>
+                            <th>Learning Rate</th>
                             <th>Sequenz</th>
                             <th>BatchSize</th>
                             <th>Epochen</th>
-                            <th>k</th>
                             <th>Loss</th>
                             <th>Genauigkeit</th>
                         </tr>
@@ -638,11 +675,10 @@ export default function Wortvorhersage() {
                         <tbody>
                         {experimentHistory.map((exp) => (
                             <tr key={exp.id}>
-                                <td>{exp.id}</td>
+                                <td>{exp.learning}</td>
                                 <td>{exp.seq}</td>
                                 <td>{exp.batch}</td>
                                 <td>{exp.epochs}</td>
-                                <td>{exp.k}</td>
                                 <td>{exp.loss}</td>
                                 <td>{exp.acc}</td>
                             </tr>
