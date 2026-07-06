@@ -3,9 +3,9 @@ import * as tf from '@tensorflow/tfjs';
 import * as tfvis from '@tensorflow/tfjs-vis';
 
 const SEQUENCE_LENGTH = 5;
-const EPOCHS = 10;
+const EPOCHS = 15;
 const BATCHSIZE = 32;
-const TOP_K = 5;
+const TOP_K = 3;
 
 export default function Wortvorhersage() {
 
@@ -668,9 +668,9 @@ export default function Wortvorhersage() {
                         <tr>
                             <th>Nr.</th>
                             <th>Sequenz</th>
-                            <th>Batch</th>
+                            <th>BatchSize</th>
                             <th>Epochen</th>
-                            <th>k-Wert</th>
+                            <th>k</th>
                             <th>Loss</th>
                             <th>Genauigkeit</th>
                         </tr>
