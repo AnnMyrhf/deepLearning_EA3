@@ -8,9 +8,9 @@ export default function Diskussion() {
                     <p>
                         Das Modell wird direkt im Browser mit TensorFlow.js und WebGL trainiert. Für größere Datensätze
                         ist das sicher nicht die optimale Lösung, für den verwendeten Datensatz (11.368 Zeichen,
-                        Vokabulargröße 789) funktionierte das Live-Training jedoch überraschend gut. Die Trainingsläufe
+                        Vokabulargröße 789) funktionierte das Live-Training jedoch ganz gut. Die Trainingsläufe
                         liefen flüssig, ohne dass das UI einfror oder der Browser überlastet wurde. Für größere
-                        Datensätze würde ich das Training allerdings eher auf einer GPU, z. B. mit Python in Google
+                        Datensätze würde ich das Training allerdings auf jeden Fall auf einer GPU, z. B. mit Python in Google
                         Colab oder lokal, durchführen.
 
                         Genau das hatte ich ursprünglich auch geplant. Aufgrund von Kompatibilitätsproblemen zwischen
@@ -41,7 +41,7 @@ export default function Diskussion() {
                             <strong className="text-light">Batch Size
                             </strong>
                             <p>Die Reduzierung der Batch Size von 64 auf 16 hat für eine spürbare Steigerung der
-                                Stabilität während des Trainingsprozesses gesorgt.</p>
+                                Stabilität während des Trainings gesorgt.</p>
                         </li>
                         <li id="automatische-uebersetzung"
                             className="list-group-item bg-transparent text-secondary border-secondary px-0 py-3">
@@ -49,7 +49,7 @@ export default function Diskussion() {
                             </strong>
                             <p>Der Vergleich zwischen einem und zwei Hidden Layern (mit je 100 LSTM Units) ergab, dass
                                 die Architektur mit einem Hidden Layer bei gleichen Units nahezu identische, teils sogar
-                                leicht bessere Ergebnisse erzielte (Loss: 0,1184 und Genauigkeit: 0,9959). Deshalb habe
+                                leicht bessere Ergebnisse erzielte (Loss: 0.1184 und Genauigkeit: 0.9959). Deshalb habe
                                 ich
                                 mich final für das effizientere Modell mit einem Hidden Layer entschieden.</p>
                         </li>
