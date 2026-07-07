@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import * as tf from '@tensorflow/tfjs';
 import * as tfvis from '@tensorflow/tfjs-vis';
 
@@ -10,49 +10,50 @@ const LEARNING_RATE = 0.005;
 
 export default function Wortvorhersage() {
 
-    // State Toogle-Button-Logik
+    // State für den Auto-Modus
     const [isAutoRunning, setIsAutoRunning] = useState(false);
 
-    // Inhalt Textfeld
+    // Aktueller Inhalt des Texteingabefelds
     const [promptText, setPromptText] = useState('');
 
-    // State für Vokabular und Mappings
+    // Vokabular und Wort-Mappings
     const [vocabData, setVocabData] = useState(null);
 
-    // State, um das TensorFlow-Modell später zu speichern
+    // TensorFlow-Modell
     const [model, setModel] = useState(null);
 
-    // State für die berechneten Vorhersagen
+    // Aktuelle Vorhersagen
     const [predictions, setPredictions] = useState([]);
 
-    // State um Training zu tracken
+    // Trainingsstatus
     const [isTraining, setIsTraining] = useState(false);
-
     const [isModelReady, setIsModelReady] = useState(false);
 
-    // States für Endloschleifen bei Automatik-Funktion
+    // Endlosschleife
     const [endlessWarning, setEndlessWarning] = useState('');
 
-    // States fuer den Traningsfortschritt
+    // Trainingsfortschritt
     const [currentEpoch, setCurrentEpoch] = useState(0);
     const [metrics, setMetrics] = useState({loss: '-', acc: '-'});
 
-    // State für den Traningsverlauf
+    // Trainingsverlauf für Diagramm
     const [trainingHistory, setTrainingHistory] = useState([]);
     const trainingId = useRef(0);
 
-    // Referenz für den Container des tfvis-Diagramms
+    // Referenz für das tfvis-Diagramm
     const chartRef = useRef(null);
 
-    // State für Doku der Experimente
+    // Experimentdaten speichern
     const [experimentHistory, setExperimentHistory] = useState([]);
 
-    // Text beim ersten Rendern der Komponente laden
+    // Datensatz beim Start laden
     useEffect(() => {
         const fetchDataset = async () => {
             try {
                 await tf.setBackend('webgl');
                 await tf.ready();
+
+                // Trainingsdatensatz laden
 
                 // Grosser Datensatz
                 //const response = await fetch('/model/trainingsdata_big.txt');
@@ -61,18 +62,15 @@ export default function Wortvorhersage() {
                 const response = await fetch('/model/trainingsdata_medium.txt');
 
                 // Kleiner Datensatz
-              // const response = await fetch('/model/trainingsdata_small.txt');
+                // const response = await fetch('/model/trainingsdata_small.txt');
                 const rawText = await response.text();
 
                 console.log("Datensatz erfolgreich geladen. Zeichenanzahl:", rawText.length);
 
-                // 1. Bereinigen
+                // Text bereinigen und Vokabular erstellen
                 const cleanedText = cleanText(rawText);
-
-                // 2. Vokabular aufbauen
                 const vocab = buildVocabulary(cleanedText);
 
-                // 3. Im State speichern
                 setVocabData(vocab);
 
                 console.log("Vokabular erfolgreich erstellt!");
@@ -85,7 +83,7 @@ export default function Wortvorhersage() {
                 const xs = tf.concat(tensorBatches.map(b => b.xs));
                 const ys = tf.concat(tensorBatches.map(b => b.ys));
 
-                // Die einzelnen Batches sofort aus dem Speicher löschen
+                // Einzelne Batches sofort aus dem Speicher löschen
                 tensorBatches.forEach(b => {
                     b.xs.dispose();
                     b.ys.dispose();
@@ -95,7 +93,7 @@ export default function Wortvorhersage() {
                 console.log("Shape von X (Eingabe):", xs.shape);
                 console.log("Shape von Y (Label):", ys.shape);
 
-                // Modell aufbauen und trainieren (Training startet kurz verzögert, damit die UI flüssig bleibt)
+                // Modell verzögert trainieren, um UI-Blockierung zu vermeiden
                 setTimeout(async () => {
                     const trainedModel = await buildAndTrainModel(xs, ys, vocab.vocabSize);
                     setModel(trainedModel);
@@ -188,12 +186,12 @@ export default function Wortvorhersage() {
         }
     };
 
-    // Text bereinigen und normieren
+    // Text bereinigen und normalisieren
     const cleanText = (text) => {
         // Alles in Kleinbuchstaben umwandeln
         let cleaned = text.toLowerCase();
 
-        // Sonderzeichen und Zahlen entfernen, aber deutsche Umlaute behalten
+        // Sonderzeichen und Zahlen entfernen, Umlaute behalten
         cleaned = cleaned.replace(/[^a-zäöüß\s]/g, ' ');
 
         // Mehrfache Leerzeichen und Zeilenumbrüche durch ein einziges Leerzeichen ersetzen
@@ -204,11 +202,11 @@ export default function Wortvorhersage() {
 
     // Hilfsfunktion, um Vokabular und Mappings erstellen
     const buildVocabulary = (text) => {
-        // 1. Text an Leerzeichen aufteilen (erzeugt Array, ist okay bei modernem JS)
+        // Text an Leerzeichen aufteilen
         const words = text.split(' ');
 
-        // 2. Map verwenden, um die Häufigkeit zu zählen und Unikate zu finden
-        // Eine Map ist bei großen Datenmengen effizienter als ein Object
+        // Map verwenden, um die Häufigkeit zu zählen und Unikate zu finden
+        // Map ist bei großen Datenmengen effizienter als ein Object
         const wordCounts = new Map();
 
         for (const word of words) {
@@ -217,14 +215,14 @@ export default function Wortvorhersage() {
             }
         }
 
-        // 3. Vokabular-Liste erstellen
-        // Wir fügen das OOV-Token direkt am Anfang hinzu
+        // Vokabular-Liste erstellen
+        // OOV-Token direkt am Anfang hinzufuegen
         const uniqueWords = ['<OOV>', ...wordCounts.keys()];
 
         const word2idx = {};
         const idx2word = {};
 
-        // 4. Mappings effizient befüllen
+        // Mappings effizient befüllen
         uniqueWords.forEach((word, index) => {
             word2idx[word] = index;
             idx2word[index] = word;
@@ -254,7 +252,7 @@ export default function Wortvorhersage() {
             sequencesX.push(sequenceIds);
             labelsY.push(targetId);
 
-            // Wenn die Chunk-Größe erreicht ist, erzeuge einen Tensor und leere die Arrays
+            // Wenn die Chunk-Größe erreicht ist, erzeugt Tensor und leert die Arrays
             if (sequencesX.length >= chunkSize) {
                 tensors.push({
                     xs: tf.tensor2d(sequencesX, [sequencesX.length, sequenceLength]),
@@ -282,20 +280,19 @@ export default function Wortvorhersage() {
         const model = tf.sequential();
 
         // Embedding Layer
-        // Wandelt die Wort-IDs in dichte Vektoren um
         model.add(tf.layers.embedding({
-            inputDim: vocabSize, outputDim: 50, // Dimensionalität der Einbettung
-            inputLength: SEQUENCE_LENGTH, // Muss der SEQUENCE_LENGTH entsprechen
-            embeddingsInitializer: 'glorotUniform' // Diese Methode ist schneller und standardmäßig empfohlen
+            inputDim: vocabSize, outputDim: 50,
+            inputLength: SEQUENCE_LENGTH,
+            embeddingsInitializer: 'glorotUniform'
         }));
 
-        // 1. Hidden Layer: LSTM (Mindestens 100 Units laut Aufgabe)
+        // 1. Hidden Layer: LSTM
         model.add(tf.layers.lstm({
-            units: 100, returnSequences: false, kernelInitializer: 'glorotUniform', // Initialisierer für die Gewichte
-            recurrentInitializer: 'glorotUniform' // Initialisierer für die rekurrenten Gewichte
+            units: 100, returnSequences: false, kernelInitializer: 'glorotUniform',
+            recurrentInitializer: 'glorotUniform'
         }));
 
-        // 2. Hidden Layer: LSTM (Mindestens 100 Units laut Aufgabe)
+        // 2. Hidden Layer: LSTM
         // model.add(tf.layers.lstm({
         //     units: 100,
         //     returnSequences: false,
@@ -304,13 +301,12 @@ export default function Wortvorhersage() {
         // }));
 
         // 3. Output Layer: Dense Layer mit Softmax
-        // Gibt Wahrscheinlichkeiten für jedes mögliche Wort im Vokabular aus
+        // Berechnet Wortwahrscheinlichkeiten
         model.add(tf.layers.dense({
             units: vocabSize, activation: 'softmax'
         }));
 
-        // 4. Kompilieren
-        // Wir nutzen 'sparseCategoricalCrossentropy', da unsere Labels (Y) einfache IDs und keine One-Hot-Vektoren sind
+        // Sparse-Loss für numerische Klassen-IDs
         model.compile({
             optimizer: tf.train.adam(LEARNING_RATE),
             loss: 'sparseCategoricalCrossentropy', metrics: ['accuracy']
@@ -320,7 +316,7 @@ export default function Wortvorhersage() {
         setIsTraining(true);
         setTrainingHistory([]); // Verlauf vor dem Initialtraining leeren
 
-        /// Gib dem Browser Zeit für ein Rendering-Update
+        /// Gib Browser Zeit für ein Rendering-Update
         await new Promise(resolve => requestAnimationFrame(resolve));
 
         // Training starten
@@ -339,24 +335,24 @@ export default function Wortvorhersage() {
                     const lossVal = logs.loss;
                     const accVal = logs.accuracy !== undefined ? logs.accuracy : logs.acc;
 
-                    // 1. UI-Metriken aktualisieren
+                    // UI-Metriken aktualisieren
                     setMetrics({
                         loss: lossVal.toFixed(4),
                         acc: (accVal * 100).toFixed(1) + '%'
                     });
 
-                    // 2. Training-History für das manuelle tfvis-Diagramm aktualisieren
+                    // Training-History für das manuelle tfvis-Diagramm aktualisieren
                     setTrainingHistory(prev => [...prev, {
                         loss: lossVal,
                         acc: accVal
                     }]);
 
-                    // 3. Experiment in die Tabelle speichern, wenn fertig
+                    // Experiment in die Tabelle speichern, wenn fertig
                     if (epoch === EPOCHS - 1) {
                         saveExperiment(lossVal, accVal);
                     }
 
-                    // 4. Thread freigeben
+                    // Thread freigeben
                     await tf.nextFrame();
                 }
             }
@@ -426,7 +422,7 @@ export default function Wortvorhersage() {
         setPredictions(nextTopK);
     };
 
-    // Wird aufgerufen, wenn der Nutzer auf "Vorhersage" klickt
+    // Vorhersage ausführen
     const handleNext = async () => {
         if (predictions.length > 0) {
             const bestWord = predictions[0].word;
@@ -449,14 +445,14 @@ export default function Wortvorhersage() {
             // Warnung löschen, wenn alles normal läuft
             setEndlessWarning('');
 
-            // State aktualisieren und nächste Vorhersage anstoß
+            // State aktualisieren und nächste Vorhersage anstossen
             setPromptText(updatedText);
             const nextTopK = await calculatePrediction(updatedText);
             setPredictions(nextTopK);
         }
     };
 
-    // Auto-Funktion (überwacht den Schalter isAutoRunning, wenn er aktiv ist, löst er nach einer bestimmten Zeit (z. B. 1,5 Sekunden) automatisch die handleWeiter-Funktion aus)
+    // Automatische Wortfortsetzung starten
     useEffect(() => {
         if (!isAutoRunning || predictions.length === 0) return;
 
@@ -537,7 +533,7 @@ export default function Wortvorhersage() {
                         >
                             Text-Eingabe (Prompt)
                         </label>
-
+                        {/* Eingabefeld */}
                         <textarea
                             id="promptInput"
                             className="form-control text-input mb-2"
@@ -547,7 +543,6 @@ export default function Wortvorhersage() {
                             value={promptText}
                             onChange={(e) => setPromptText(e.target.value)}
                         />
-
                         <div className="d-flex justify-content-between align-items-start mt-2">
                             <div
                                 id="promptHelp"
@@ -566,7 +561,7 @@ export default function Wortvorhersage() {
                             </button>
                         </div>
                     </div>
-
+                    {/* Control-Buttons */}
                     <div className="wortvorhersage-controls p-5">
 
                         <div className="prediction-actions">
@@ -574,7 +569,7 @@ export default function Wortvorhersage() {
                                 type="button"
                                 className="btn btn-cta fw-bold btn-fixed-width"
                                 onClick={handlePredictClick}
-                                disabled={!model || isTraining} // Button deaktivieren, solange das Modell lädt/trainiert
+                                disabled={!model || isTraining}
                             >
                                 Vorhersage
                             </button>
@@ -592,7 +587,7 @@ export default function Wortvorhersage() {
                                 type="button"
                                 className="btn btn-secondary fw-bold btn-fixed-width"
                                 onClick={() => setIsAutoRunning(true)}
-                                disabled={!model || isTraining || predictions.length === 0}// Button deaktivieren, solange das Modell lädt/trainiert
+                                disabled={!model || isTraining || predictions.length === 0}
                             >
                                 Auto
                             </button>) : (<button
@@ -603,7 +598,7 @@ export default function Wortvorhersage() {
                                 Stopp
                             </button>)}
                         </div>
-
+                        {/* Vorhersage-Container */}
                         <div className="wortvorhersage-status">
                             {isAutoRunning ? 'Automatik läuft...' : 'Warten auf Eingabe'}
                         </div>
@@ -638,28 +633,29 @@ export default function Wortvorhersage() {
                         </div>
                     </div>
                 </div>
+            )}
+            {/* Diagramm fuer Trainingsdaten */}
+            <div className="mt-4">
+                <h5 className="fw-bold mb-2">
+                    Trainingsverlauf
+                </h5>
+                <div className="chart-container-wrapper p-3 border rounded bg-light">
+                    {trainingHistory.length === 0 && (
+                        <p className="chart-container-wrapper-text small">Warte auf Trainingsdaten...</p>
                     )}
-                    {/* Diagramm fuer Trainingsdaten */}
-                    <div className="mt-4">
-                        <h5 className="fw-bold mb-2">
-                            Trainingsverlauf
-                        </h5>
-                    <div className="chart-container-wrapper p-3 border rounded bg-light">
-                          {trainingHistory.length === 0 && (
-                            <p className="chart-container-wrapper-text small">Warte auf Trainingsdaten...</p>
-                        )}
-                        <div
-                            ref={chartRef}
-                            className="w-100"
-                            style={{
-                                minHeight: '300px',
-                                display: trainingHistory.length > 0 ? 'block' : 'none'
-                            }}
-                        ></div>
-                    </div>
-                    </div>
+                    <div
+                        ref={chartRef}
+                        className="w-100"
+                        style={{
+                            minHeight: '300px',
+                            display: trainingHistory.length > 0 ? 'block' : 'none'
+                        }}
+                    ></div>
+                </div>
+            </div>
+            {/* Tabelle fuer Trainingsdaten */}
             <div className="mt-5">
-                <h5 className="fw-bold mb-3">Dokumentation der Experimente</h5>
+                <h5 className="fw-bold mb-3">Trainingsdaten</h5>
                 <div className="table-responsive">
                     <table className="table table-bordered table-hover">
                         <thead className="table-light">
@@ -687,6 +683,6 @@ export default function Wortvorhersage() {
                     </table>
                 </div>
             </div>
-    </div>
+        </div>
     );
 }
